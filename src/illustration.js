@@ -61,7 +61,7 @@ export function outline(mesh, width = 1.6) {
 
 // Triangle ribbons give real CSS-pixel thickness on WebGL, where ordinary
 // line widths are usually fixed at one pixel. One draw call per spatial batch.
-export const inkFog = new T.Vector2(95,230);
+export const inkFog = new T.Vector2(110,300);
 export function comicEdges(edges, width=2.5) {
   const source=edges.attributes.position.array, positions=[], other=[], sides=[];
   for(let i=0;i<source.length;i+=6){

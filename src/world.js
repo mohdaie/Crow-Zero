@@ -10,6 +10,7 @@ import { loadPetrolPump } from './petrol-pump.js?v=0.1.0';
 import { createTrees } from './trees.js?v=0.1.0';
 import { createGrass, grassMask, maskTexture, groundMaterial } from './grass.js?v=0.1.0';
 import { roadSurfaces } from './road-surfaces.js?v=0.1.0';
+import { paintSkyline, createCityRing } from './skyline.js?v=0.2.0';
 export const places = BUILDINGS;
 export async function makeWorld(canvas) {
   // Wait for the local fallback font before painting permanent sign textures.
@@ -27,7 +28,7 @@ export async function makeWorld(canvas) {
   renderer.toneMappingExposure = 1.12;
   const scene = new T.Scene();
   scene.background = new T.Color(0xc8dce0);
-  scene.fog = new T.Fog(0xc8dce0, 95, 230);
+  scene.fog = new T.Fog(0xc8dce0, 110, 300);
   const camera = new T.PerspectiveCamera(43, 1, .1, Math.max(700, Math.hypot(GROUND.maxX-GROUND.minX,GROUND.maxZ-GROUND.minZ)*2));
   // Units of the town plan are built in their own frame: `root` is the group
   // being filled and `placing` the unit whose transform colliders follow.
@@ -72,15 +73,16 @@ export async function makeWorld(canvas) {
   wood.repeat.set(2,2);
   const textures = {grass:surface('grass'), dirt:surface('dirt'), wood, asphalt:surface('asphalt'), plaster:surface('plaster'), tile:surface('tile'), weathered:surface('weathered'), floor:surface('floor'), clay:surface('clay')};
   textures.dirt.repeat.set(1,1);textures.asphalt.repeat.set(1,1);textures.plaster.repeat.set(2,2);textures.tile.repeat.set(1,1);
-  // Illustrated distant scenery wraps the playable 3D streets: flat painted
-  // houses/trees/hills carry the horizon instead of additional modeled town.
-  const panorama=await loader.loadAsync(new URL('../assets/textures/illustrated-horizon.webp',import.meta.url).href);
+  // A painted city skyline wraps the playable streets; the 3D tower ring
+  // (skyline.js) fills the middle distance between them.
+  const panorama=new T.CanvasTexture(paintSkyline());
   panorama.colorSpace=T.SRGBColorSpace;panorama.wrapS=T.RepeatWrapping;panorama.repeat.x=3;
   scene.background=new T.Color(0x8ab8d1);
   const horizonRadius=Math.max(210,Math.hypot(Math.max(-GROUND.minX,GROUND.maxX),Math.max(-GROUND.minZ,GROUND.maxZ))+60);
   const horizon=new T.Mesh(new T.CylinderGeometry(horizonRadius,horizonRadius,160,64,1,true),new T.MeshBasicMaterial({map:panorama,side:T.BackSide,fog:false}));
   horizon.position.y=54;scene.add(horizon);
   const mats = new Map();
+  createCityRing({scene,toon,register:(key,material)=>{mats.set(key,material);return material;},ground:GROUND,roads:ROADS,bounds:TOWN_BOUNDS,outer:horizonRadius-8});
   function textured(color,kind) {
     const key=kind+color;
     if(!mats.has(key)){
@@ -595,7 +597,6 @@ export async function makeWorld(canvas) {
       last={x,z,points:pole.points};
     }
   }
-  for(let i=0;i<9;i++){const hill=mesh(new T.IcosahedronGeometry(15+(i%3)*4,1),i%2?0x839d75:0x9bb087,-120+i*30,-3,-135-Math.sin(i)*8);hill.scale.y=.7;}
   // Transparent painted ground-cover patches layer over the lawn. They sit
   // below paths/roads, whose depth naturally masks foliage at their edges.
   const grassPatch=await loader.loadAsync(new URL('../assets/textures/illustrated-grass-patch.webp',import.meta.url).href);

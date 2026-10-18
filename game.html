@@ -1,0 +1,87 @@
+<!doctype html><html lang="ms"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><title>Crow-Zero · Operasi Gagak</title>
+<style>
+:root{--cream:#f9f4e5;--ink:#1f3b33;--green:#244e43;--gold:#d6a83a;--red:#c8463a;--pad:max(12px,env(safe-area-inset-left))}
+*{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;background:#8ab8d1;font:600 14px system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#world{position:fixed;inset:0;width:100vw;height:100dvh;display:block;touch-action:none}
+.panel{background:var(--cream);border:2.5px solid var(--green);border-radius:14px;box-shadow:0 3px 0 #1f3b3340}
+.hud{position:fixed;pointer-events:none;z-index:2}
+#badge{top:12px;left:var(--pad);display:flex;gap:10px;align-items:center;padding:6px 14px 6px 10px;background:var(--green);color:var(--cream);border-color:var(--gold)}
+#badge svg{width:34px;height:34px}#badge b{display:block;font-size:20px;letter-spacing:.5px;line-height:1}#badge small{display:block;color:var(--gold);font-size:11px;letter-spacing:3px;margin-top:3px}
+#mission{top:70px;left:var(--pad);width:250px;padding:10px 14px}
+#mission b{font-size:16px;display:block}#mission .title{font-weight:500;margin:2px 0 6px}
+#mission .count{display:flex;align-items:center;gap:8px;font-size:18px}#mission .count svg{width:28px;height:22px}
+.bar{height:12px;border:2px solid var(--green);border-radius:8px;margin-top:6px;overflow:hidden;background:#e5e0cf}.bar i{display:block;height:100%;width:0;background:var(--gold);transition:width .3s}
+#timer{top:12px;left:50%;transform:translateX(-50%);padding:6px 22px;border-radius:30px;font-size:24px;display:flex;align-items:center;gap:10px;font-variant-numeric:tabular-nums}
+#timer.low{color:var(--red)}
+#stealth{top:64px;left:50%;transform:translateX(-50%);padding:4px 14px;border-radius:20px;font-size:12px;letter-spacing:1px;display:flex;gap:6px;align-items:center}
+#stealth.KELIHATAN{background:#f5d3c9;border-color:var(--red);color:var(--red)}#stealth.TERSOROK{background:#d6eadb}
+#map{top:12px;right:calc(var(--pad) + 58px);width:150px;height:150px;border-radius:50%;border:3px solid var(--green);background:var(--cream);overflow:hidden}
+#map canvas{width:100%;height:100%;display:block}
+#pause{top:12px;right:var(--pad);width:46px;height:46px;pointer-events:auto;font-size:20px;display:grid;place-items:center;cursor:pointer}
+#crosshair{left:50%;top:50%;width:0;height:0}
+#crosshair i{position:absolute;background:#fff;box-shadow:0 0 0 1.5px #1f3b33a0;border-radius:2px}
+#crosshair .dot{width:4px;height:4px;left:-2px;top:-2px;border-radius:50%}
+#hitmark{left:50%;top:50%;width:0;height:0;opacity:0;transition:opacity .25s}#hitmark::before,#hitmark::after{content:"";position:absolute;left:-17px;top:-2px;width:34px;height:4px;background:var(--red);border-radius:2px;transform:rotate(45deg)}#hitmark::after{transform:rotate(-45deg)}
+#ammo{right:var(--pad);bottom:14px;padding:6px 16px;font-size:30px;display:flex;align-items:center;gap:10px;font-variant-numeric:tabular-nums}
+#ammo small{font-size:18px;opacity:.7}#ammo .shells{display:flex;gap:3px}#ammo .shells i{width:8px;height:22px;border-radius:2px 2px 1px 1px;background:linear-gradient(#c8463a 0 70%,#d6a83a 70%)}#ammo .shells i.spent{opacity:.2}
+#toast{top:30%;left:50%;transform:translateX(-50%);padding:8px 18px;border-radius:24px;font-size:16px;opacity:0;transition:opacity .3s}
+#toast.show{opacity:1}
+.btn{position:fixed;z-index:3;border-radius:50%;background:var(--cream);border:3px solid var(--green);display:grid;place-items:center;font:800 11px system-ui;color:var(--ink);touch-action:none;box-shadow:0 0 0 3px var(--gold) inset,0 3px 0 #1f3b3340;padding:0;cursor:pointer}
+.btn svg{width:42%;height:42%;margin-top:6px}.btn.on{background:#f4dfa3}
+.btn:active{transform:scale(.95)}
+#fire{right:calc(var(--pad) + 8px);bottom:110px;width:110px;height:110px;font-size:15px}
+#aim{right:calc(var(--pad) + 30px);bottom:236px;width:78px;height:78px}
+#reload{right:calc(var(--pad) + 130px);bottom:84px;width:72px;height:72px;font-size:10px}
+#crouch{right:calc(var(--pad) + 132px);bottom:178px;width:72px;height:72px}
+#joystick{position:fixed;z-index:3;left:calc(var(--pad) + 14px);bottom:24px;width:140px;height:140px;border:3px solid #f9f4e5d0;background:#f9f4e560;border-radius:50%;touch-action:none;display:grid;place-items:center}
+#knob{width:60px;height:60px;border-radius:50%;background:var(--green);border:3px solid var(--cream);pointer-events:none}
+#hint{left:50%;bottom:14px;transform:translateX(-50%);padding:6px 16px;border-radius:20px;font-size:12px;white-space:nowrap}
+.overlay{position:fixed;inset:0;z-index:5;display:grid;place-items:center;background:#1f3b3370;padding:16px}
+.card{max-width:440px;width:100%;padding:22px 22px 18px;text-align:center}
+.card h1{margin:0 0 4px;font-size:26px}.card h2{margin:0 0 10px;color:#7b6224;font-size:13px;letter-spacing:2px}.card p{font-weight:500;line-height:1.45;margin:8px 0}
+.card ul{text-align:left;font-weight:500;padding-left:20px;margin:10px 0;line-height:1.5;font-size:13px}
+.card .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+.card button,.card a{font:800 15px system-ui;padding:12px 22px;border-radius:12px;border:2.5px solid var(--green);background:var(--gold);color:var(--ink);cursor:pointer;text-decoration:none}
+.card .ghost{background:var(--cream)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:12px 0;font-size:14px}.stats div{background:#efe8d3;border-radius:8px;padding:6px}.stats b{display:block;font-size:20px}
+#loading{font-size:15px}
+[hidden]{display:none!important}
+.touch-only{display:none}
+@media (pointer:fine){.touch-only,.touch{display:none!important}}
+@media (pointer:coarse){.desk{display:none!important}}
+@media (pointer:coarse){.touch-only{display:grid}}
+@media (max-height:500px){#mission{top:62px;width:210px;padding:6px 10px}#mission .title{display:none}#map{width:104px;height:104px}#fire{width:92px;height:92px;bottom:70px}#aim{width:64px;height:64px;bottom:176px}#reload{width:60px;height:60px;bottom:50px;right:calc(var(--pad) + 112px)}#crouch{width:60px;height:60px;bottom:126px;right:calc(var(--pad) + 112px)}#joystick{width:116px;height:116px;bottom:16px}#ammo{font-size:22px;bottom:8px;padding:4px 12px}#ammo .shells{display:none}#hint{display:none}#stealth{top:56px}#badge small{display:none}#badge b{font-size:16px}#badge svg{width:26px;height:26px}}
+@media (max-width:620px){#badge{display:none}#mission{top:12px;width:180px}#mission .title{display:none}#map{width:100px;height:100px}#timer{top:auto;bottom:auto;top:64px;font-size:18px;padding:4px 14px}#stealth{top:106px}}
+</style>
+<script type="importmap">{"imports":{"three":"./vendor/three.module.js","three/addons/":"./vendor/addons/"}}</script></head><body>
+<canvas id="world"></canvas>
+<div id="badge" class="hud panel"><svg viewBox="0 0 40 40" fill="#d6a83a"><path d="M20 3l3 5h-6zM16 9h8v6h-8zM9 15h22v3H9zM11 19h3v14h-3zM18.5 19h3v14h-3zM26 19h3v14h-3zM7 34h26v3H7z"/></svg><div><b>OPERASI GAGAK</b><small>MAJLIS BANDARAYA</small></div></div>
+<div id="mission" class="hud panel"><b id="mission-id">MISI 01</b><div class="title" id="mission-title">Bersihkan pusat bandar</div><div class="count"><svg viewBox="0 0 40 30" fill="#1f3b33"><path d="M2 18c6-1 10-6 15-7 3-4 8-5 11-3l7-1-6 4c1 5-3 10-10 11l-4 6h-3l3-6c-5 0-9-2-13-4z"/></svg><span id="count">0 / 20</span></div><div class="bar"><i id="progress"></i></div></div>
+<div id="timer" class="hud panel"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="13" r="9"/><path d="M12 8v5l3 2M9 2h6"/></svg><span id="clock">05:00</span></div>
+<div id="stealth" class="hud panel KELIHATAN"><svg width="16" height="12" viewBox="0 0 24 16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 8s4-7 11-7 11 7 11 7-4 7-11 7S1 8 1 8z"/><circle cx="12" cy="8" r="3"/></svg><span id="stealth-text">KELIHATAN</span></div>
+<div id="map" class="hud"><canvas id="minimap" width="300" height="300"></canvas></div>
+<button id="pause" class="panel" aria-label="Jeda" style="position:fixed;z-index:3">❚❚</button>
+<div id="crosshair" class="hud"><i class="dot"></i><i id="ch-l"></i><i id="ch-r"></i><i id="ch-t"></i><i id="ch-b"></i></div>
+<div id="hitmark" class="hud"></div>
+<div id="toast" class="hud panel"></div>
+<div id="ammo" class="hud panel"><div class="shells" id="shells"></div><span id="mag">06</span><small id="reserve">/ 36</small></div>
+<div id="hint" class="hud panel touch">‹ Leret untuk pandang ›</div>
+<div id="hint2" class="hud panel desk" style="left:50%;bottom:14px;transform:translateX(-50%);padding:6px 16px;border-radius:20px;font-size:12px;white-space:nowrap">WASD jalan · Klik kiri tembak · Klik kanan bidik · R isi · C sorok</div>
+<div id="joystick" class="touch-only" aria-label="Joystick pergerakan"><div id="knob"></div></div>
+<button id="aim" class="btn touch-only"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="7"/><path d="M12 1v6M12 17v6M1 12h6M17 12h6"/></svg>BIDIK</button>
+<button id="fire" class="btn touch-only"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><path d="M12 1v6M12 17v6M1 12h6M17 12h6"/></svg>TEMBAK</button>
+<button id="reload" class="btn touch-only"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="3" width="4" height="18" rx="1"/><rect x="10" y="3" width="4" height="18" rx="1"/><rect x="16" y="3" width="4" height="18" rx="1"/></svg>ISI SEMULA</button>
+<button id="crouch" class="btn touch-only"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="3"/><path d="M8 10h8l1 6h-3v6h-4v-6H7z"/></svg>SOROK</button>
+<div id="start" class="overlay"><div class="card panel">
+  <h2>MAJLIS BANDARAYA · OPERASI GAGAK</h2><h1 id="start-title">MISI 01</h1>
+  <p id="loading">Memuatkan bandar…</p>
+  <div id="brief" hidden><p>Gagak rumah semakin banyak di pusat bandar. Tembak <b id="brief-target">20</b> ekor sebelum masa tamat.</p>
+  <ul><li><b>Sorok:</b> tunduk di sebelah dinding, kereta atau pokok. Gagak susah nampak anda.</li><li><b>Senyap:</b> senapang patah anda berpenyenyap. Hanya gagak dekat yang dengar tembakan.</li><li>Gagak yang nampak anda akan berbunyi dan terbang lari, bersama kawan-kawannya.</li><li><b>Bidik</b> untuk tembakan lebih rapat dan jauh.</li></ul>
+  <div class="row"><button id="go">MULA ▶</button><a class="ghost" href="tools/map-editor.html">Editor peta</a></div></div>
+</div></div>
+<div id="paused" class="overlay" hidden><div class="card panel"><h1>Jeda</h1><div class="row"><button id="resume">Sambung</button><button id="restart" class="ghost">Mula semula</button><a class="ghost" href="tools/map-editor.html">Editor peta</a></div></div></div>
+<div id="end" class="overlay" hidden><div class="card panel"><h2 id="end-kicker">MISI 01</h2><h1 id="end-title">MISI BERJAYA</h1><p id="end-text"></p>
+  <div class="stats"><div>Gagak ditembak<b id="s-kills">0</b></div><div>Ketepatan<b id="s-acc">0%</b></div><div>Gagak terlepas<b id="s-fled">0</b></div><div>Masa<b id="s-time">0:00</b></div></div>
+  <div class="row"><button id="again">Main lagi</button><a class="ghost" href="tools/map-editor.html">Editor peta</a></div></div></div>
+<script type="module" src="src/game.js?v=0.2.0"></script>
+</body></html>
