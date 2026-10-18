@@ -52,8 +52,8 @@ export function pelletsKill(distance, hits) {
 
 // How fast a perched crow grows suspicious of the player (per second).
 // Standing in the open is seen from far; crouching behind cover only up close.
-export function noticeRate({ distance, crouched = false, covered = false, moving = false }) {
-  let radius = crouched ? (moving ? 11 : 7) : (moving ? 26 : 18);
+export function noticeRate({ distance, crouched = false, covered = false, moving = false, running = false }) {
+  let radius = crouched ? (moving ? 11 : 7) : running ? 34 : (moving ? 26 : 18);
   if (covered) radius *= crouched ? .45 : .7;
   if (distance >= radius) return -.35;
   return .15 + (1 - distance / radius) * 1.6;
@@ -72,21 +72,31 @@ export function stealthLabel(crouched, covered) {
 }
 
 // Game version, shown on the title screen (kept equal to package.json).
-export const VERSION = '0.6.0';
+export const VERSION = '0.7.0';
 
-// Difficulty is how many crows there are to find: more crows is easier.
-// `start` crows sit in town when the mission begins; then `base` (plus one
-// per 6 kills, up to `max`) are kept in town, arriving in groups of `group`
-// and each staying `stay` seconds before it flies off.
+// Difficulty: how many crows there are to find (more is easier) and how
+// long the mission lasts. `start` crows sit in town when it begins; then
+// `base` (plus one per 6 kills, up to `max`) are kept in town, arriving in
+// groups of `group`, each staying `stay` seconds before it flies off.
+// ('biasa' is the stored id of SEDERHANA, kept for saved settings.)
 export const DIFFICULTY = {
-  mudah: { label: 'MUDAH', note: 'Banyak gagak (12–18), lama hinggap', start: 14, base: 12, max: 18, group: [2, 4], stay: [35, 55] },
-  biasa: { label: 'BIASA', note: 'Gagak sederhana (7–12)', start: 8, base: 7, max: 12, group: [1, 3], stay: [25, 45] },
-  sukar: { label: 'SUKAR', note: 'Gagak sangat sedikit (4–7), cepat terbang', start: 5, base: 4, max: 7, group: [1, 2], stay: [16, 30] }
+  mudah: { label: 'MUDAH', note: 'Banyak gagak (24–36) · 5 minit', seconds: 300, start: 28, base: 24, max: 36, group: [3, 6], stay: [35, 55] },
+  biasa: { label: 'SEDERHANA', note: 'Gagak sederhana (14–24) · 3 minit', seconds: 180, start: 16, base: 14, max: 24, group: [2, 4], stay: [25, 45] },
+  sukar: { label: 'SUKAR', note: 'Gagak sedikit (8–14), cepat terbang · 2 minit', seconds: 120, start: 10, base: 8, max: 14, group: [1, 3], stay: [16, 30] }
 };
 export const crowsWanted = (level, kills) => Math.min(level.max, level.base + Math.floor(kills / 6));
 
-// Mission: shoot `target` crows before the clock runs out.
-export const MISSION = { id: 'MISI 01', title: 'Kawal kawasan pasar', target: 20, seconds: 120 };
+// Mission: shoot `target` crows before the clock runs out (the difficulty
+// sets the clock; `seconds` is the default).
+export const MISSION = { id: 'MISI 01', title: 'Kawal kawasan pasar', target: 20, seconds: 180 };
+
+// Moving: walk, and break into a run after holding a direction for
+// `runAfter` seconds (the map is big). Crouching and aiming slow you down.
+export const MOVE = { walk: 4.6, run: 8.2, crouch: 2.1, runAfter: 2 };
+export function moveSpeed({ crouched = false, aim = 0, held = 0 }) {
+  if (crouched) return MOVE.crouch * (1 - aim * .4);
+  return (held >= MOVE.runAfter && aim < .3 ? MOVE.run : MOVE.walk) * (1 - aim * .4);
+}
 
 // Where a crow is from the player's point of view: `angle` is radians off
 // straight ahead (+ to the right), `side` one of the four callout sectors.

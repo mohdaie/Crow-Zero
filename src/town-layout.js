@@ -133,6 +133,9 @@ export const KINDS = {
   busstop: { label: 'Bus shelter', open: true, places: [[0, 0, 13, 9]], doors: [[0, 3.2]], props: [['phone', 7.4, 0, 3], ['bin', -7.2, 1.5]], solids: [[0, 0, 13, 9]], floors: [[0, 0, 13, 9, .18]], decor: [['hujan', -1, -9, .9]] },
   workshop: { label: 'Tyre workshop', places: [[0, 0, 10, 10]], doors: [[0, -6.3]], props: [['drum', 4.2, -5.9], ['motor', -3.2, -6.6, 1, 0, 1]], solids: [[0, 0, 11, 11]], floors: [[0, 0, 10, 10, .19]], decor: [['kelapa', 6, 8, .9], ['pisang', 7.6, 2.5, .9]] },
   market: { label: 'Night market', open: true, places: [[0, 0, 24, 20]], doors: [[0, -9.8]], props: [['cart', 11.5, 2, 1], ['gas', -11.8, 1.5]], solids: [[0, 0, 22, 17]], floors: [], decor: [['kelapa', -12.5, -11, .9], ['hujan', 14, 11.5, .85], ['kelapa', 14.5, -10, .9]] },
+  // Rubbish area: skip bins and bag piles behind a low brick wall, open at
+  // the front (+z). Crows gather here more than anywhere else in town.
+  dump: { label: 'Kawasan sampah', places: [], solids: [[0, 0, 16, 9]], floors: [] },
   square: {
     label: 'Town square', open: true, places: [],
     solids: [[0, 0, 22, 17]], floors: [[0, 0, 22, 17, .09]],
@@ -144,7 +147,7 @@ export const KINDS = {
   passerby: { label: 'Passer-by', vehicle: true, places: [], solids: [[0, 0, .6, .6]], floors: [] }
 };
 for (const [kind, cat, unique] of [['home', 'rumah', 1], ['house', 'rumah'], ['terrace', 'rumah'], ['minishop', 'kedai'], ['warung', 'kedai', 1], ['shophouses', 'kedai', 1],
-  ['market', 'kedai'], ['school', 'komuniti', 1], ['canteen', 'komuniti', 1], ['nursery', 'komuniti'], ['mosque', 'komuniti', 1], ['hall', 'komuniti'], ['library', 'komuniti'],
+  ['market', 'kedai'], ['dump', 'kedai'], ['school', 'komuniti', 1], ['canteen', 'komuniti', 1], ['nursery', 'komuniti'], ['mosque', 'komuniti', 1], ['hall', 'komuniti'], ['library', 'komuniti'],
   ['court', 'komuniti'], ['wakaf', 'rehat'], ['pondok', 'rehat'], ['square', 'rehat'], ['busstop', 'jalan'], ['workshop', 'jalan'], ['petrol', 'jalan', 1],
   ['bus', 'kenderaan', 1], ['sedan', 'kenderaan'], ['passerby', 'kenderaan']]) Object.assign(KINDS[kind], { cat, unique: !!unique });
 

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import {readFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
-import {VERSION,DIFFICULTY,crowsWanted,SHOTGUN,SNIPER,bulletPath,bearing,crowCallout,CROW_RADIUS,pelletOffsets,raySphere,pelletsKill,noticeRate,coverNear,stealthLabel,missionState,MISSION,clock} from '../src/hunt-rules.js';
+import {VERSION,DIFFICULTY,crowsWanted,MOVE,moveSpeed,SHOTGUN,SNIPER,bulletPath,bearing,crowCallout,CROW_RADIUS,pelletOffsets,raySphere,pelletsKill,noticeRate,coverNear,stealthLabel,missionState,MISSION,clock} from '../src/hunt-rules.js';
 import {planProblems} from '../src/town-layout.js';
 import {CITY_PLAN} from '../src/city-plan.js';
 import {derive} from '../src/town-layout.js';
@@ -53,7 +53,7 @@ test('sniper bullet passes through crows in a line, stops at walls and range',()
   assert.deepEqual(bulletPath(hits,50),['a','b']);
   assert.deepEqual(bulletPath([[SNIPER.range+1,'far']]),[]);
   assert.ok(SNIPER.noiseRadius>SHOTGUN.noiseRadius,'the Barrett is louder than the suppressed shotgun');
-  assert.equal(MISSION.seconds,120);assert.equal(MISSION.target,20);
+  assert.equal(MISSION.target,20);
 });
 test('callouts name the busiest direction relative to where the player faces',()=>{
   // yaw 0 faces -z: ahead is -z, right is +x.
@@ -74,4 +74,13 @@ test('difficulty sets how many crows there are, and the version matches package.
   assert.equal(crowsWanted(biasa,600),biasa.max);
   assert.ok(sukar.stay[1]<biasa.stay[1]);
   assert.equal(VERSION,JSON.parse(readFileSync(new URL('../package.json',import.meta.url))).version);
+});
+test('difficulty sets the clock: 5, 3 and 2 minutes',()=>{
+  assert.deepEqual([DIFFICULTY.mudah.seconds,DIFFICULTY.biasa.seconds,DIFFICULTY.sukar.seconds],[300,180,120]);
+  assert.equal(DIFFICULTY.biasa.label,'SEDERHANA');
+});
+test('holding a direction for 2 s breaks into a louder run',()=>{
+  assert.equal(moveSpeed({held:1.9}),MOVE.walk);assert.equal(moveSpeed({held:2}),MOVE.run);
+  assert.ok(moveSpeed({held:5,crouched:true})<MOVE.walk);assert.ok(moveSpeed({held:5,aim:1})<MOVE.walk);
+  assert.ok(noticeRate({distance:30,running:true})>0&&noticeRate({distance:30,moving:true})<0,'running is heard further');
 });

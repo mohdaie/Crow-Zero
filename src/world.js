@@ -127,6 +127,9 @@ export async function makeWorld(canvas) {
     if(placing){const [wx,wz]=toWorld(placing,x,z),swap=placing.rot%2;colliders.push({x:wx,z:wz,w:swap?d:w,d:swap?w:d,kind});}
     else colliders.push({ x, z, w, d, kind });
   }
+  // Spots crows love (bin rims, bag piles), in world space, for the crow game.
+  const hotspots=[];
+  function hotspot(x,y,z){const [wx,wz]=placing?toWorld(placing,x,z):[x,z];hotspots.push({x:wx,y,z:wz});}
   function roundCollider(x,z,r,kind='trunk'){const [wx,wz]=placing?toWorld(placing,x,z):[x,z];colliders.push({x:wx,z:wz,r,kind});}
   function place(unit,build){
     const group=new T.Group();group.position.set(unit.x,0,unit.z);group.rotation.y=unit.rot*Math.PI/2;scene.add(group);
@@ -481,6 +484,30 @@ export async function makeWorld(canvas) {
       }
       const label=sign('PASAR MALAM · SABTU',0,4.4,-10,12);label.rotation.y=Math.PI;
     },
+    // Kawasan sampah: three skip bins against a low brick wall, piles of
+    // rubbish bags and litter in front. Crows sit on the bin rims and bags.
+    dump(u){
+      let seed=hashOf(u.id);const r=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);
+      box(16,.08,9,0x8a946f,0,.04,0);
+      for(const [x,z,w,d] of [[0,-4.4,16,.3],[-7.85,0,.3,9],[7.85,0,.3,9]]){box(w,1.2,d,0xab6046,x,.6,z);box(w+.1,.12,d+.1,0xcbbd99,x,1.26,z);collider(x,z,w,d,'wall');}
+      const label=sign('KAWASAN SAMPAH',0,1.95,-4.2,5);
+      for(const [x,color] of [[-5,0x4e6b62],[0,0x89b0ca],[5,0xab6046]]){
+        box(3.2,1.3,1.9,color,x,.73,-2.9);box(3.4,.12,2.05,0x344e42,x,1.42,-2.9);
+        for(const side of [-1,1])box(.12,.5,.12,0x414b3f,x+side*1.4,.2,-2.9+side*.7);
+        const lid=box(3.3,.08,1.9,color,x,1.75,-3.9);lid.rotation.x=x?-1.2:-.15;
+        collider(x,-2.9,3.4,2.1,'bin');
+        for(const t of [-1.2,-.4,.4,1.2]){hotspot(x+t,1.48,-2.0);if(r()<.5)hotspot(x+t,1.48,-3.8);}
+      }
+      // Bag piles: black, green and blue sacks, squashed spheres.
+      for(let i=0;i<7;i++){
+        const px=-6+i*2+r()-.5,pz=.5+r()*2.8,n=3+Math.floor(r()*4);
+        for(let k=0;k<n;k++){const bag=mesh(new T.IcosahedronGeometry(.42+r()*.2,1),[0x414b3f,0x344e42,0x4e6b62,0x89b0ca][Math.floor(r()*4)],px+(r()-.5)*1.1,.32+(k>2?.4:0),pz+(r()-.5)*1.1);bag.scale.set(1,.72,1);}
+        roundCollider(px,pz,.85,'bags');hotspot(px,.95,pz);hotspot(px+1,.1,pz+1.2);
+      }
+      // Litter: cartons, cans and paper.
+      for(let i=0;i<26;i++)box(.2+r()*.3,.05+r()*.12,.15+r()*.25,[0xf4e9d0,0xbf815e,0xd4b24b,0xe5a88c,0x9fc8ba][i%5],(r()-.5)*14,.1,(r()-.2)*4.5).rotation.y=r()*3;
+      for(let i=0;i<6;i++)hotspot((r()-.5)*12,.1,2.8+r()*1.4);
+    },
     square(u){
       // The town's little square: paths, gardens and an old clock.
       box(22,.08,17,0xe8dbb8,0,.05,0);
@@ -675,5 +702,5 @@ export async function makeWorld(canvas) {
   }
   storefronts.setTime(12*60);
   function resize(){const w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();inkViewport.set(w,h);}
-  return {scene,camera,renderer,colliders,groundHeight,resize,bounds:TOWN_BOUNDS,spawn:SPOTS.spawn,wind:trees.wind,updateGrass:lawn.update,wires};
+  return {scene,camera,renderer,colliders,groundHeight,resize,bounds:TOWN_BOUNDS,spawn:SPOTS.spawn,wind:trees.wind,updateGrass:lawn.update,wires,hotspots};
 }

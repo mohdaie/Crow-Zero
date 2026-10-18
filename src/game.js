@@ -1,8 +1,8 @@
 import * as T from 'three';
 import { safeSpawn, movePlayer, canStand } from './walk.js?v=0.1.0';
 import { CITY_PLAN } from './city-plan.js?v=0.2.0';
-import { VERSION, DIFFICULTY, crowsWanted, SHOTGUN, SNIPER, bulletPath, bearing, crowCallout, MISSION, pelletOffsets, raySphere, pelletsKill, coverNear, stealthLabel, missionState, clock } from './hunt-rules.js?v=0.6.0';
-import { startAudio, setVolume, sfx } from './sfx.js?v=0.6.0';
+import { VERSION, DIFFICULTY, crowsWanted, MOVE, moveSpeed, SHOTGUN, SNIPER, bulletPath, bearing, crowCallout, MISSION, pelletOffsets, raySphere, pelletsKill, coverNear, stealthLabel, missionState, clock } from './hunt-rules.js?v=0.7.0';
+import { startAudio, setVolume, sfx } from './sfx.js?v=0.7.0';
 const $ = id => document.getElementById(id), canvas = $('world');
 
 // ------------------------------------------------------------ title & options
@@ -23,7 +23,8 @@ for (const [id, level] of Object.entries(DIFFICULTY)) {
 function showSettings() {
   $('volume').value = Math.round(settings.volume * 100); $('volume-value').textContent = Math.round(settings.volume * 100) + '%';
   for (const b of levelButtons.children) b.classList.toggle('on', b.dataset.level === settings.difficulty);
-  $('title-level').textContent = DIFFICULTY[settings.difficulty].label;
+  const level = DIFFICULTY[settings.difficulty];
+  $('title-level').textContent = level.label; $('brief-time').textContent = level.seconds / 60 + ' minit'; $('clock').textContent = clock(level.seconds);
 }
 showSettings();
 $('volume').oninput = () => { settings.volume = $('volume').value / 100; setVolume(settings.volume); saveSettings(); showSettings(); };
@@ -57,9 +58,9 @@ try {
   }
   const { planFromHash, ROADS } = await import('./town-layout.js?v=0.1.0');
   if (!planFromHash(location.hash)) throw Error('Peta tidak sah. Betulkan masalah layout di editor.');
-  const { makeWorld } = await import('./world.js?v=0.3.0');
+  const { makeWorld } = await import('./world.js?v=0.7.0');
   const { toon } = await import('./illustration.js?v=0.1.0');
-  const { findPerches, createFlock } = await import('./crows.js?v=0.6.0');
+  const { findPerches, createFlock } = await import('./crows.js?v=0.7.0');
   const { createShotgun } = await import('./shotgun.js?v=0.4.0');
   const { createSniper } = await import('./sniper.js?v=0.4.0');
   const world = await makeWorld(canvas), { camera, renderer, scene, bounds, colliders } = world;
@@ -69,7 +70,7 @@ try {
   // Everything a pellet or a falling crow can strike: the batched town.
   const solids = [];
   scene.traverse(o => { if (o.isMesh && !o.isInstancedMesh && o.castShadow && o.material?.type !== 'ShaderMaterial') solids.push(o); });
-  const perches = findPerches({ colliders, solids, bounds, groundHeight: world.groundHeight, canStand, rand: Math.random, wires: world.wires });
+  const perches = findPerches({ colliders, solids, bounds, groundHeight: world.groundHeight, canStand, rand: Math.random, wires: world.wires, hotspots: world.hotspots });
   const flock = createFlock({ scene, toon, perches, bounds, solids, groundHeight: world.groundHeight });
   let level = DIFFICULTY[settings.difficulty];
   // Two weapons, each with its own model, rules and ammunition. `cycle` is
@@ -84,7 +85,8 @@ try {
   const position = safeSpawn(world.spawn, bounds, colliders);
   let yaw = world.spawn.heading + Math.PI, pitch = 0, eye = 1.65, crouched = false, aimHeld = false, aimToggle = false, aim = 0;
   let pump = -1, reloading = false, shellTimer = 0;
-  let kills = 0, shots = 0, fled = 0, timeLeft = MISSION.seconds, state = 'loading', spawnTimer = 4, kick = 0;
+  let held = 0, runFov = 0; const heldDir = { x: 0, z: 0 };
+  let kills = 0, shots = 0, fled = 0, timeLeft = DIFFICULTY[settings.difficulty].seconds, state = 'loading', spawnTimer = 4, kick = 0;
   // Trigger input: held (button, mouse or Space) keeps firing as each pump
   // finishes; a tap during the pump is kept briefly and fires when ready.
   let triggerHeld = false, queuedShot = 0;
@@ -92,7 +94,7 @@ try {
   const ray = new T.Raycaster();
 
   // ---------------------------------------------------------------- HUD
-  $('mission-id').textContent = MISSION.id; $('mission-title').textContent = MISSION.title; $('brief-target').textContent = MISSION.target; $('brief-time').textContent = MISSION.seconds % 60 ? clock(MISSION.seconds) : MISSION.seconds / 60 + ' minit'; $('start-title').textContent = MISSION.title;
+  $('mission-id').textContent = MISSION.id; $('mission-title').textContent = MISSION.title; $('brief-target').textContent = MISSION.target; $('start-title').textContent = MISSION.title;
   function hudAmmo() {
     $('mag').textContent = String(w.mag).padStart(2, '0'); $('reserve').textContent = '/ ' + w.reserve; $('ammo').classList.toggle('empty', w.mag === 0);
     $('ammo').dataset.weapon = w.id; $('weapon-name').textContent = w.name;
@@ -222,9 +224,9 @@ try {
   // ------------------------------------------------------------- controls
   const resize = () => { world.resize(); for (const x of weapons) x.model.resize(canvas.clientWidth / canvas.clientHeight); };
   window.addEventListener('resize', resize); resize();
-  const MOVE = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+  const MOVE_KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight'];
   window.addEventListener('keydown', e => {
-    if (MOVE.includes(e.code)) { e.preventDefault(); keys.add(e.code); }
+    if (MOVE_KEYS.includes(e.code)) { e.preventDefault(); keys.add(e.code); }
     if (e.repeat) return;
     if (e.code === 'KeyR') startReload();
     if (e.code === 'KeyC' || e.code === 'ControlLeft') toggleCrouch();
@@ -287,7 +289,7 @@ try {
   $('go').onclick = () => {
     startAudio(); setVolume(settings.volume);
     // The difficulty sets the crows: how many sit in town at the start, and how long each stays.
-    level = DIFFICULTY[settings.difficulty]; flock.settings.stay = level.stay;
+    level = DIFFICULTY[settings.difficulty]; flock.settings.stay = level.stay; timeLeft = level.seconds;
     for (let i = 0; i < 60 && flock.crows.length < level.start; i++) flock.spawnGroup(Math.min(groupSize(), level.start - flock.crows.length), true);
     $('title').hidden = true; $('options').hidden = true; state = 'playing'; last = performance.now();
     // Phones: full screen, locked sideways, where the browser allows it.
@@ -304,7 +306,7 @@ try {
     const titles = { won: 'MISI BERJAYA', time: 'MASA TAMAT', ammo: 'PELURU HABIS' };
     const texts = { won: 'Pusat bandar bersih daripada gagak. Syabas!', time: 'Gagak masih banyak. Cuba sorok lebih rapat dan bidik dahulu.', ammo: 'Semua peluru telah digunakan. Bidik sebelum menembak.' };
     $('end-title').textContent = titles[result]; $('end-text').textContent = texts[result]; $('end-kicker').textContent = MISSION.id + ' · ' + MISSION.title;
-    $('s-kills').textContent = kills; $('s-acc').textContent = shots ? Math.round(kills / shots * 100) + '%' : '–'; $('s-fled').textContent = fled; $('s-time').textContent = clock(MISSION.seconds - timeLeft);
+    $('s-kills').textContent = kills; $('s-acc').textContent = shots ? Math.round(kills / shots * 100) + '%' : '–'; $('s-fled').textContent = fled; $('s-time').textContent = clock(level.seconds - timeLeft);
     $('end').hidden = false; result === 'won' ? sfx.win() : sfx.lose();
   }
 
@@ -330,12 +332,16 @@ try {
     let dz = stick.z + Number(keys.has('KeyS') || keys.has('ArrowDown')) - Number(keys.has('KeyW') || keys.has('ArrowUp'));
     const length = Math.max(1, Math.hypot(dx, dz)); dx /= length; dz /= length;
     const moving = playing && Math.hypot(dx, dz) > .1;
+    // Holding one direction for 2 s (or Shift) breaks into a run.
+    if (moving && (held === 0 || dx * heldDir.x + dz * heldDir.z > .5)) held += dt; else held = 0;
+    if (moving) { heldDir.x = dx; heldDir.z = dz; }
+    const running = moving && !crouched && aim < .3 && (held >= MOVE.runAfter || keys.has('ShiftLeft') || keys.has('ShiftRight'));
     aim = T.MathUtils.damp(aim, playing && (aimHeld || aimToggle) && !reloading && !nextWeapon ? 1 : 0, w.id === 'sniper' ? 9 : 12, dt);
     // Switching: lower the gun in hand, swap, raise the other one.
     if (nextWeapon) { lowered = Math.min(1, lowered + dt / .22); if (lowered >= 1) { w = nextWeapon; nextWeapon = null; pump = -1; hudAmmo(); $('swap').dataset.next = weapons[(weapons.indexOf(w) + 1) % weapons.length].id; } }
     else lowered = Math.max(0, lowered - dt / .3);
     if (playing) {
-      const speed = (crouched ? 1.9 : 4.2) * (1 - aim * .4);
+      const speed = running ? MOVE.run : moveSpeed({ crouched, aim });
       movePlayer(position, (dx * Math.cos(yaw) + dz * Math.sin(yaw)) * dt * speed, (-dx * Math.sin(yaw) + dz * Math.cos(yaw)) * dt * speed, bounds, colliders);
       timeLeft -= dt;
       // Pump or recoil, then reload: shells one by one, or a whole magazine.
@@ -360,14 +366,15 @@ try {
     }
     eye = T.MathUtils.damp(eye, crouched ? 1.05 : 1.65, 10, dt);
     kick = T.MathUtils.damp(kick, 0, 8, dt);
+    runFov = T.MathUtils.damp(runFov, running ? 7 : 0, 6, dt);
     const ground = world.groundHeight(position.x, position.z);
     camera.position.set(position.x, ground + eye, position.z); camera.rotation.set(pitch + kick, yaw, 0);
     // The Barrett's scope zooms far in; the shotgun only narrows a little.
     const scoped = w.id === 'sniper' && aim > .85;
-    camera.fov = w.id === 'sniper' ? T.MathUtils.lerp(70, SNIPER.zoomFov, Math.max(0, aim - .6) / .4) : 70 - aim * 22; camera.updateProjectionMatrix();
+    camera.fov = (w.id === 'sniper' ? T.MathUtils.lerp(70, SNIPER.zoomFov, Math.max(0, aim - .6) / .4) : 70 - aim * 22) + runFov; camera.updateProjectionMatrix();
     const covered = coverNear(position.x, position.z, colliders);
     if (playing) {
-      const events = flock.update(dt, at / 1000, { position: { x: position.x, y: ground + eye, z: position.z }, crouched, covered, moving });
+      const events = flock.update(dt, at / 1000, { position: { x: position.x, y: ground + eye, z: position.z }, crouched, covered, moving, running, scoped });
       for (const ev of events) {
         const d = ev.crow.pos.clone().sub(camera.position), dist = d.length(), right = new T.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
         const pan = d.normalize().dot(right), volume = Math.max(0, 1 - dist / 70);
@@ -386,10 +393,11 @@ try {
     } else flock.update(0, at / 1000, { position: { x: 1e5, y: 0, z: 1e5 } });
 
     // HUD: clock, stealth pill, crosshair spread, toasts, minimap.
+    if (state === 'loading') timeLeft = DIFFICULTY[settings.difficulty].seconds; // the title shows the chosen clock
     $('clock').textContent = clock(timeLeft); $('timer').classList.toggle('low', timeLeft < 30);
     const watched = flock.crows.some(c => c.alive && c.state === 'perch' && c.aware > .45);
-    const label = watched ? 'GAGAK CURIGA' : stealthLabel(crouched, covered), pill = $('stealth');
-    if (pill.dataset.label !== label) { pill.dataset.label = label; pill.className = 'hud card ' + (watched ? 'CURIGA' : label); $('stealth-text').textContent = label; }
+    const label = watched ? 'GAGAK CURIGA' : running ? 'LARI · BISING' : stealthLabel(crouched, covered), pill = $('stealth');
+    if (pill.dataset.label !== label) { pill.dataset.label = label; pill.className = 'hud card ' + (watched ? 'CURIGA' : running ? 'KELIHATAN' : label); $('stealth-text').textContent = label; }
     for (const b of [$('fire'), $('fire-left')]) b.classList.toggle('busy', pump >= 0 || reloading || !!nextWeapon);
     $('scope').hidden = !scoped; $('crosshair').hidden = scoped || (w.id === 'sniper' && aim > .5);
     const gap = Math.tan(spread()) / Math.tan(camera.fov * Math.PI / 360) * canvas.clientHeight / 2;
