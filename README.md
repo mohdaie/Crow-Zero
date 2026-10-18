@@ -1,6 +1,6 @@
 # Crow-Zero
 
-v0.1.0 — city map editor and FPS walking preview.
+v0.2.0 — city map editor, FPS walking preview and the first crow-hunting mission.
 
 Scenery and the map editor were copied from **RetroMalaysia**, then adapted so you can build your own city from empty land. The RetroMalaysia repository is unchanged.
 
@@ -19,7 +19,25 @@ Open `tools/map-editor.html` (the home page opens it automatically).
 
 If browser storage is full or blocked, the editor shows **Map belum disimpan**. Use **Export JSON** to keep the current map; saving again clears the warning only after the browser accepts it. On small landscape phones the map and scrollable tools sit side by side; portrait phones show tools below the map.
 
-The 3D preview checks the map first: fix red layout errors before opening it. It includes collision with buildings, props and trees. This release is the map authoring foundation; crow AI, shooting, weapon HUD and missions are future gameplay work.
+The 3D preview checks the map first: fix red layout errors before opening it. It includes collision with buildings, props and trees.
+
+## Play: Operasi Gagak (MISI 01)
+
+Open `game.html`, or **Main: Operasi Gagak ▶** in the editor (also **Main ▶** in the walking preview). The game plays your editor map; with no buildings saved it uses the built-in small city in `src/city-plan.js` (shophouses, office and flat blocks, a market, a mosque, a bus stop and a petrol station on two avenues).
+
+Shoot **20 crows in 5 minutes** with a suppressed pump shotgun.
+
+- **Hide.** Crouch (**SOROK** / `C`) next to a wall, car, tree or stall. The pill under the clock shows `KELIHATAN` (seen), `SEPARA` (half hidden) or `TERSOROK` (hidden). Perched crows slowly notice a standing player from about 18–26 m, a hidden one only within about 3 m. `GAGAK CURIGA` means a crow is staring at you.
+- **Shoot silently.** The suppressor means only crows within 14 m of you hear the shot. Crows next to one that falls get suspicious. A crow that notices you caws, flies off and warns the crows around it.
+- **Shotgun.** 9 pellets per shell. One pellet brings a crow down within 34 m, two are needed out to 50 m. **BIDIK** (right mouse) tightens the spread and zooms. Pump after every shot. 6 shells in the tube and 36 spare; reload one shell at a time (**ISI SEMULA** / `R`). Walls and roofs stop pellets.
+- **Crows** fly in from the city, circle, and land on roof edges, lamp heads and open ground. They peck, look around and move to new perches. The minimap shows them in red (orange when suspicious).
+- Desktop: click to capture the mouse, WASD to walk, left click to shoot, right click to aim, `R` reload, `C` crouch, `Esc` pause. Phone: joystick, swipe to look, buttons on the right (drag from **TEMBAK** to adjust aim while firing).
+
+The mission ends when you reach 20 crows, the time runs out, or you run out of shells. Rules and numbers live in `src/hunt-rules.js`; crow behaviour in `src/crows.js`; the gun in `src/shotgun.js`; sounds are synthesised in `src/sfx.js`.
+
+## City background
+
+Every map now sits inside a city instead of a kampung. A painted skyline (sky, clouds, two hazy tower layers) wraps the horizon, and a ring of cel-shaded towers with window bays fills the land between the map and the horizon. Avenues that run off the map edge stay open as streets into the city. See `src/skyline.js`. The kampung horizon painting and the green hills are no longer used.
 
 ## Local commands
 

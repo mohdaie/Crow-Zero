@@ -14,3 +14,18 @@
 - `npm test`: all 9 existing tests passed. `npm run build` and `git diff --check` passed.
 - Eight focused browser scenarios passed against `dist/`, with no page errors: editing at 390×844, 667×375, 740×360, 800×390 and 844×390; blocked autosave/save/undo/redo plus JSON recovery; storage recovery and reload persistence; saved-draft FPS rendering. Mobile checks verified usable map/panel dimensions, tree resizing, tab scroll reset and absence of horizontal page overflow.
 - The original 15-scenario WebGL smoke run remains the foundation validation above; this review reran only affected workflows and the pending portrait check. These checks use emulated mobile viewports in Chromium, not physical Android devices.
+
+## v0.2.0 — crow hunt and city background (18 October 2026)
+
+- `npm test`: 16 tests pass. The 7 new tests cover the built-in city map's validity, pellet spread (hip vs aimed), ray–sphere hits, kill rules by range, crow notice rates (standing vs hidden), cover detection and stealth labels, mission end states and the clock.
+- `npm run build` passes and now includes `game.html`.
+- Chromium (SwiftShader WebGL) checks against the dev server, with no page errors:
+  - the game loads the built-in city in about 1.6 s and finds about 130 crow perches
+  - crows fly in, circle, land and perch (simulation fast-forwarded with a test hook)
+  - an aimed shot at a perched crow 14 m away brought it down: kill counter 0→1, ammo 6→5
+  - crouching updates the stealth pill
+  - a standing player near a perched crow raises its suspicion
+  - phone landscape layout (Pixel 7) shows joystick, BIDIK/SOROK/TEMBAK/ISI SEMULA, and TEMBAK fires
+  - editor shows the new play link; the walking preview still loads with the new city background
+- Fixed during testing: a negative first frame time after starting (rAF timestamp earlier than `performance.now()`) that threw the gun model off-screen; a large first mouse jump after pointer lock that pointed the view at the sky.
+- Not verified: real phones, real GPUs (frame rate), and how the synthesised audio sounds. Crow and shotgun numbers are first-pass tuning.
