@@ -1,8 +1,8 @@
 import * as T from 'three';
 import { safeSpawn, movePlayer, canStand } from './walk.js?v=0.1.0';
 import { CITY_PLAN } from './city-plan.js?v=0.2.0';
-import { SHOTGUN, MISSION, pelletOffsets, raySphere, pelletsKill, coverNear, stealthLabel, missionState, clock } from './hunt-rules.js?v=0.2.0';
-import { startAudio, sfx } from './sfx.js?v=0.2.0';
+import { SHOTGUN, MISSION, pelletOffsets, raySphere, pelletsKill, coverNear, stealthLabel, missionState, clock } from './hunt-rules.js?v=0.3.0';
+import { startAudio, sfx } from './sfx.js?v=0.3.0';
 const $ = id => document.getElementById(id), canvas = $('world');
 const encode = plan => btoa(Array.from(new TextEncoder().encode(JSON.stringify(plan)), c => String.fromCharCode(c)).join('')).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
@@ -19,10 +19,10 @@ try {
   }
   const { planFromHash, ROADS } = await import('./town-layout.js?v=0.1.0');
   if (!planFromHash(location.hash)) throw Error('Peta tidak sah. Betulkan masalah layout di editor.');
-  const { makeWorld } = await import('./world.js?v=0.1.0');
+  const { makeWorld } = await import('./world.js?v=0.3.0');
   const { toon } = await import('./illustration.js?v=0.1.0');
-  const { findPerches, createFlock } = await import('./crows.js?v=0.2.0');
-  const { createShotgun } = await import('./shotgun.js?v=0.2.0');
+  const { findPerches, createFlock } = await import('./crows.js?v=0.3.0');
+  const { createShotgun } = await import('./shotgun.js?v=0.3.0');
   const world = await makeWorld(canvas), { camera, renderer, scene, bounds, colliders } = world;
   camera.rotation.order = 'YXZ'; camera.fov = 70; camera.near = .05; camera.updateProjectionMatrix();
   renderer.autoClear = false;
@@ -30,7 +30,7 @@ try {
   // Everything a pellet or a falling crow can strike: the batched town.
   const solids = [];
   scene.traverse(o => { if (o.isMesh && !o.isInstancedMesh && o.castShadow && o.material?.type !== 'ShaderMaterial') solids.push(o); });
-  const perches = findPerches({ colliders, solids, bounds, groundHeight: world.groundHeight, canStand, rand: Math.random });
+  const perches = findPerches({ colliders, solids, bounds, groundHeight: world.groundHeight, canStand, rand: Math.random, wires: world.wires });
   const flock = createFlock({ scene, toon, perches, bounds, solids, groundHeight: world.groundHeight });
   const gun = createShotgun(toon);
 
@@ -38,17 +38,16 @@ try {
   const position = safeSpawn(world.spawn, bounds, colliders);
   let yaw = world.spawn.heading + Math.PI, pitch = 0, eye = 1.65, crouched = false, aimHeld = false, aimToggle = false, aim = 0;
   let mag = SHOTGUN.magazine, reserve = SHOTGUN.reserve, pump = -1, reloading = false, shellTimer = 0;
-  let kills = 0, shots = 0, fled = 0, timeLeft = MISSION.seconds, state = 'loading', spawnTimer = .5, kick = 0;
+  let kills = 0, shots = 0, fled = 0, timeLeft = MISSION.seconds, state = 'loading', spawnTimer = 4, kick = 0;
+  // Trigger input: held (button, mouse or Space) keeps firing as each pump
+  // finishes; a tap during the pump is kept briefly and fires when ready.
+  let triggerHeld = false, queuedShot = 0;
   const keys = new Set(), stick = { x: 0, z: 0 }, lookDelta = { x: 0, y: 0 };
   const ray = new T.Raycaster();
 
   // ---------------------------------------------------------------- HUD
   $('mission-id').textContent = MISSION.id; $('mission-title').textContent = MISSION.title; $('brief-target').textContent = MISSION.target; $('start-title').textContent = MISSION.id + ' · ' + MISSION.title;
-  const shellsEl = $('shells'); for (let i = 0; i < SHOTGUN.magazine; i++) shellsEl.append(document.createElement('i'));
-  function hudAmmo() {
-    $('mag').textContent = String(mag).padStart(2, '0'); $('reserve').textContent = '/ ' + reserve;
-    [...shellsEl.children].forEach((el, i) => el.classList.toggle('spent', i >= mag));
-  }
+  function hudAmmo() { $('mag').textContent = String(mag).padStart(2, '0'); $('reserve').textContent = '/ ' + reserve; $('ammo').classList.toggle('empty', mag === 0); }
   function hudCount() { $('count').textContent = `${kills} / ${MISSION.target}`; $('progress').style.width = Math.min(100, kills / MISSION.target * 100) + '%'; }
   let toastTimer = 0;
   function toast(text, seconds = 1.6) { $('toast').textContent = text; $('toast').classList.add('show'); toastTimer = seconds; }
@@ -59,32 +58,32 @@ try {
   const PX = 3.75, mini = $('minimap'), mctx = mini.getContext('2d');
   const G = { minX: bounds.minX - 15, minZ: bounds.minZ - 15, maxX: bounds.maxX + 15, maxZ: bounds.maxZ + 15 };
   const base = document.createElement('canvas'); base.width = (G.maxX - G.minX) * PX; base.height = (G.maxZ - G.minZ) * PX;
-  { const b = base.getContext('2d'); b.fillStyle = '#ddd6bd'; b.fillRect(0, 0, base.width, base.height);
-    b.fillStyle = '#e9e3cf'; b.fillRect((bounds.minX - G.minX) * PX, (bounds.minZ - G.minZ) * PX, (bounds.maxX - bounds.minX) * PX, (bounds.maxZ - bounds.minZ) * PX);
-    b.fillStyle = '#9fa8a0'; for (const r of ROADS) b.fillRect((r.x - r.w / 2 - G.minX) * PX, (r.z - r.d / 2 - G.minZ) * PX, r.w * PX, r.d * PX);
-    b.fillStyle = '#a99f86'; for (const c of colliders) if (c.r === undefined && c.w * c.d > 4) b.fillRect((c.x - c.w / 2 - G.minX) * PX, (c.z - c.d / 2 - G.minZ) * PX, c.w * PX, c.d * PX);
+  { const b = base.getContext('2d'); b.fillStyle = '#cfd2c2'; b.fillRect(0, 0, base.width, base.height);
+    b.fillStyle = '#dcdccd'; b.fillRect((bounds.minX - G.minX) * PX, (bounds.minZ - G.minZ) * PX, (bounds.maxX - bounds.minX) * PX, (bounds.maxZ - bounds.minZ) * PX);
+    b.fillStyle = '#aeb3a8'; for (const r of ROADS) b.fillRect((r.x - r.w / 2 - G.minX) * PX, (r.z - r.d / 2 - G.minZ) * PX, r.w * PX, r.d * PX);
+    b.fillStyle = '#8f9488'; for (const c of colliders) if (c.r === undefined && c.w * c.d > 4) b.fillRect((c.x - c.w / 2 - G.minX) * PX, (c.z - c.d / 2 - G.minZ) * PX, c.w * PX, c.d * PX);
     b.fillStyle = '#7f9a6c'; for (const c of colliders) if (c.kind === 'trunk') { b.beginPath(); b.arc((c.x - G.minX) * PX, (c.z - G.minZ) * PX, 5, 0, Math.PI * 2); b.fill(); } }
   function drawMap() {
-    const W = mini.width; mctx.fillStyle = '#ddd6bd'; mctx.fillRect(0, 0, W, W);
+    const W = mini.width; mctx.fillStyle = '#cfd2c2'; mctx.fillRect(0, 0, W, W);
     mctx.drawImage(base, -(position.x - G.minX) * PX + W / 2, -(position.z - G.minZ) * PX + W / 2);
     for (const crow of flock.crows) {
       if (!crow.alive) continue;
       const x = (crow.pos.x - position.x) * PX + W / 2, y = (crow.pos.z - position.z) * PX + W / 2;
-      mctx.fillStyle = crow.state === 'perch' ? (crow.aware > .45 ? '#f0a020' : '#d0302a') : '#d0302a90';
-      mctx.beginPath(); mctx.arc(x, y, crow.state === 'perch' ? 9 : 6, 0, Math.PI * 2); mctx.fill();
+      mctx.fillStyle = crow.state === 'perch' ? (crow.aware > .45 ? '#f0a020' : '#e0302a') : '#e0302a99';
+      mctx.beginPath(); mctx.arc(x, y, crow.state === 'perch' ? 8 : 6, 0, Math.PI * 2); mctx.fill();
     }
     mctx.save(); mctx.translate(W / 2, W / 2); mctx.rotate(-yaw);
-    mctx.fillStyle = '#d6a83a'; mctx.strokeStyle = '#1f3b33'; mctx.lineWidth = 4;
-    mctx.beginPath(); mctx.moveTo(0, -22); mctx.lineTo(15, 16); mctx.lineTo(0, 8); mctx.lineTo(-15, 16); mctx.closePath(); mctx.fill(); mctx.stroke(); mctx.restore();
-    mctx.fillStyle = '#1f3b33'; mctx.font = 'bold 26px system-ui'; mctx.textAlign = 'center'; mctx.fillText('U', W / 2, 30);
+    mctx.fillStyle = '#e9b640'; mctx.strokeStyle = '#1d3a32'; mctx.lineWidth = 4; mctx.lineJoin = 'round';
+    mctx.beginPath(); mctx.moveTo(0, -26); mctx.lineTo(18, 18); mctx.lineTo(0, 8); mctx.lineTo(-18, 18); mctx.closePath(); mctx.fill(); mctx.stroke(); mctx.restore();
   }
 
   // ------------------------------------------------------------ shooting
   function spread() { return T.MathUtils.lerp(SHOTGUN.hipSpread, SHOTGUN.aimSpread, aim) * (stick.x || stick.z || keys.size ? 1.25 : 1); }
+  // A tap that can't fire yet (mid-pump) is kept until the pump finishes.
+  function pullTrigger() { if (state === 'playing' && !fire()) queuedShot = (pump >= 0 ? (1 - pump) * SHOTGUN.pumpTime : 0) + .25; }
   function fire() {
-    if (state !== 'playing') return;
-    if (pump >= 0) return;
-    if (mag <= 0) { sfx.empty(); if (reserve > 0) startReload(); return; }
+    if (state !== 'playing' || pump >= 0) return false;
+    if (mag <= 0) { if (!reloading) { sfx.empty(); if (reserve > 0) startReload(); else toast('Peluru habis!'); } return false; }
     reloading = false; gun.setReloading(false);
     mag--; shots++; hudAmmo(); gun.fire(); sfx.shot(); kick = .035;
     camera.updateMatrixWorld();
@@ -115,6 +114,7 @@ try {
     }
     if (downed) { sfx.hit(); hitTimer = .35; hudCount(); toast(downed > 1 ? `+${downed} gagak!` : '+1 gagak', 1); }
     pump = 0; setTimeout(() => sfx.pump(), 120);
+    return true;
   }
   function startReload() { if (state !== 'playing' || reloading || mag >= SHOTGUN.magazine || reserve <= 0) return; reloading = true; shellTimer = SHOTGUN.shellTime; gun.setReloading(true); }
   function toggleCrouch() { crouched = !crouched; $('crouch').classList.toggle('on', crouched); }
@@ -129,23 +129,25 @@ try {
     if (e.repeat) return;
     if (e.code === 'KeyR') startReload();
     if (e.code === 'KeyC' || e.code === 'ControlLeft') toggleCrouch();
-    if (e.code === 'Space') { e.preventDefault(); fire(); }
+    if (e.code === 'Space') { e.preventDefault(); triggerHeld = true; pullTrigger(); }
     if (e.code === 'KeyP') setPaused(state === 'playing');
   });
-  window.addEventListener('keyup', e => keys.delete(e.code));
-  window.addEventListener('blur', () => { keys.clear(); stick.x = stick.z = 0; aimHeld = false; });
+  window.addEventListener('keyup', e => { keys.delete(e.code); if (e.code === 'Space') triggerHeld = false; });
+  window.addEventListener('blur', () => { keys.clear(); stick.x = stick.z = 0; aimHeld = false; triggerHeld = false; });
   const fine = matchMedia('(pointer:fine)').matches;
-  canvas.addEventListener('mousedown', e => {
-    if (state !== 'playing') return;
+  // Only a real mouse captures the pointer. Phones also send emulated mouse
+  // events for taps; using those would ask to hide a cursor and eat the shot.
+  canvas.addEventListener('pointerdown', e => {
+    if (e.pointerType !== 'mouse' || state !== 'playing') return;
     if (document.pointerLockElement !== canvas) { canvas.requestPointerLock?.()?.catch?.(() => { }); return; }
-    if (e.button === 0) fire(); if (e.button === 2) aimHeld = true;
+    if (e.button === 0) { triggerHeld = true; pullTrigger(); } if (e.button === 2) aimHeld = true;
   });
-  window.addEventListener('mouseup', e => { if (e.button === 2) aimHeld = false; });
+  window.addEventListener('pointerup', e => { if (e.pointerType !== 'mouse') return; if (e.button === 0) triggerHeld = false; if (e.button === 2) aimHeld = false; });
   canvas.addEventListener('contextmenu', e => e.preventDefault());
   const look = (dx, dy, k) => { const s = k * (1 - aim * .45); yaw -= dx * s; pitch = Math.max(-1.45, Math.min(1.45, pitch - dy * s)); lookDelta.x += dx; lookDelta.y += dy; };
   // Some browsers report one huge jump right after the pointer locks; skip it.
   document.addEventListener('mousemove', e => { if (document.pointerLockElement === canvas && state === 'playing' && Math.abs(e.movementX) + Math.abs(e.movementY) < 300) look(e.movementX, e.movementY, .0022); });
-  document.addEventListener('pointerlockchange', () => { if (fine && document.pointerLockElement !== canvas && state === 'playing') setPaused(true); });
+  document.addEventListener('pointerlockchange', () => { triggerHeld = false; if (fine && document.pointerLockElement !== canvas && state === 'playing') setPaused(true); });
   let swipe = null;
   canvas.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') { swipe = { id: e.pointerId, x: e.clientX, y: e.clientY }; canvas.setPointerCapture(e.pointerId); } });
   canvas.addEventListener('pointermove', e => { if (swipe?.id !== e.pointerId || state !== 'playing') return; look(e.clientX - swipe.x, e.clientY - swipe.y, .0055); swipe.x = e.clientX; swipe.y = e.clientY; });
@@ -157,20 +159,22 @@ try {
   const stopStick = () => { joyId = null; stick.x = stick.z = 0; knob.style.transform = ''; }; joy.onpointerup = stopStick; joy.onpointercancel = stopStick;
   // The fire button also looks: drag from it to adjust aim while shooting.
   let fireDrag = null;
-  $('fire').addEventListener('pointerdown', e => { e.preventDefault(); $('fire').setPointerCapture(e.pointerId); fireDrag = { id: e.pointerId, x: e.clientX, y: e.clientY }; fire(); });
+  $('fire').addEventListener('pointerdown', e => { e.preventDefault(); $('fire').setPointerCapture(e.pointerId); fireDrag = { id: e.pointerId, x: e.clientX, y: e.clientY }; $('fire').classList.add('down'); triggerHeld = true; pullTrigger(); });
   $('fire').addEventListener('pointermove', e => { if (fireDrag?.id !== e.pointerId || state !== 'playing') return; look(e.clientX - fireDrag.x, e.clientY - fireDrag.y, .0045); fireDrag.x = e.clientX; fireDrag.y = e.clientY; });
-  for (const ev of ['pointerup', 'pointercancel']) $('fire').addEventListener(ev, () => { fireDrag = null; });
+  for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) $('fire').addEventListener(ev, () => { fireDrag = null; triggerHeld = false; $('fire').classList.remove('down'); });
   $('aim').addEventListener('pointerdown', e => { e.preventDefault(); toggleAim(); });
   $('reload').addEventListener('pointerdown', e => { e.preventDefault(); startReload(); });
   $('crouch').addEventListener('pointerdown', e => { e.preventDefault(); toggleCrouch(); });
 
   function setPaused(on) {
-    if (on && state === 'playing') { state = 'paused'; $('paused').hidden = false; keys.clear(); if (document.pointerLockElement) document.exitPointerLock(); }
+    if (on && state === 'playing') { state = 'paused'; $('paused').hidden = false; keys.clear(); triggerHeld = false; if (document.pointerLockElement) document.exitPointerLock(); }
     else if (!on && state === 'paused') { state = 'playing'; $('paused').hidden = true; last = performance.now(); if (fine) canvas.requestPointerLock?.()?.catch?.(() => { }); }
   }
   $('pause').onclick = () => setPaused(state === 'playing');
   $('resume').onclick = () => setPaused(false);
   $('restart').onclick = $('again').onclick = () => location.reload();
+  // The town already has crows when the mission starts: groups on roofs and wires.
+  for (let i = 0; i < 40 && flock.crows.length < 16; i++) flock.spawnGroup(2 + Math.floor(Math.random() * 4), true);
   $('go').onclick = () => { startAudio(); $('start').hidden = true; state = 'playing'; last = performance.now(); if (fine) canvas.requestPointerLock?.()?.catch?.(() => { }); toast('Cari gagak · sorok dan tembak senyap', 2.5); };
   $('loading').hidden = true; $('brief').hidden = false;
 
@@ -190,7 +194,8 @@ try {
     aimAt(i) { const c = flock.crows[i]; const d = c.pos.clone().sub(camera.position); yaw = Math.atan2(-d.x, -d.z); pitch = Math.atan2(d.y, Math.hypot(d.x, d.z)); },
     moveTo(x, z) { position.x = x; position.z = z; },
     // Fast-forward the flock (crouched, hidden player) without rendering.
-    step(seconds) { for (let t = 0; t < seconds; t += .05) { if (flock.crows.filter(c => c.alive).length < 8) flock.spawn(); flock.update(.05, t, { position: { x: position.x, y: 1, z: position.z }, crouched: true, covered: true, moving: false }); } }, fire, setCrouch(on) { if (crouched !== on) toggleCrouch(); }, setAim(on) { if (aimToggle !== on) toggleAim(); }
+    step(seconds) { for (let t = 0; t < seconds; t += .05) { if (flock.crows.filter(c => c.alive).length < 18) flock.spawnGroup(3); flock.update(.05, t, { position: { x: position.x, y: 1, z: position.z }, crouched: true, covered: true, moving: false }); } },
+    fire: () => fire(), setCrouch(on) { if (crouched !== on) toggleCrouch(); }, setAim(on) { if (aimToggle !== on) toggleAim(); }
   };
 
   // ---------------------------------------------------------------- frame
@@ -217,10 +222,12 @@ try {
           if (mag >= SHOTGUN.magazine || reserve <= 0) { reloading = false; gun.setReloading(false); }
         }
       }
-      // Keep a few crows in town; more arrive as the hunt goes on.
-      const around = flock.crows.filter(c => c.alive && c.state !== 'flee').length, want = Math.min(12, 6 + Math.floor(kills / 4));
+      queuedShot = Math.max(0, queuedShot - dt);
+      if ((triggerHeld || queuedShot > 0) && pump < 0 && fire()) queuedShot = 0;
+      // Keep the town busy: groups fly in to replace crows shot or scared off.
+      const around = flock.crows.filter(c => c.alive && c.state !== 'flee').length, want = Math.min(28, 18 + Math.floor(kills / 5));
       spawnTimer -= dt;
-      if (around < want && spawnTimer <= 0) { flock.spawn(); spawnTimer = 1.2 + Math.random() * 2.5; }
+      if (around < want && spawnTimer <= 0) { flock.spawnGroup(Math.min(want - around, 2 + Math.floor(Math.random() * 3))); spawnTimer = 2 + Math.random() * 3; }
     }
     eye = T.MathUtils.damp(eye, crouched ? 1.05 : 1.65, 10, dt);
     kick = T.MathUtils.damp(kick, 0, 8, dt);
@@ -247,10 +254,12 @@ try {
     $('clock').textContent = clock(timeLeft); $('timer').classList.toggle('low', timeLeft < 30);
     const watched = flock.crows.some(c => c.alive && c.state === 'perch' && c.aware > .45);
     const label = watched ? 'GAGAK CURIGA' : stealthLabel(crouched, covered), pill = $('stealth');
-    if (pill.dataset.label !== label) { pill.dataset.label = label; pill.className = 'hud panel ' + (watched ? 'KELIHATAN' : label); $('stealth-text').textContent = label; }
+    if (pill.dataset.label !== label) { pill.dataset.label = label; pill.className = 'hud card ' + (watched ? 'CURIGA' : label); $('stealth-text').textContent = label; }
+    $('fire').classList.toggle('busy', pump >= 0 || reloading);
     const gap = Math.tan(spread()) / Math.tan(camera.fov * Math.PI / 360) * canvas.clientHeight / 2;
-    chGap.l.style.cssText = `width:10px;height:3px;left:${-gap - 10}px;top:-1.5px`; chGap.r.style.cssText = `width:10px;height:3px;left:${gap}px;top:-1.5px`;
-    chGap.t.style.cssText = `width:3px;height:10px;top:${-gap - 10}px;left:-1.5px`; chGap.b.style.cssText = `width:3px;height:10px;top:${gap}px;left:-1.5px`;
+    const g = Math.max(7, gap), len = 13;
+    chGap.l.style.cssText = `width:${len}px;height:2px;left:${-g - len}px;top:-1px`; chGap.r.style.cssText = `width:${len}px;height:2px;left:${g}px;top:-1px`;
+    chGap.t.style.cssText = `width:2px;height:${len}px;top:${-g - len}px;left:-1px`; chGap.b.style.cssText = `width:2px;height:${len}px;top:${g}px;left:-1px`;
     toastTimer -= dt; if (toastTimer <= 0) $('toast').classList.remove('show');
     hitTimer -= dt; $('hitmark').style.opacity = hitTimer > 0 ? 1 : 0;
     drawMap();

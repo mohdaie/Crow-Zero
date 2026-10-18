@@ -7,27 +7,39 @@ import { CROW_RADIUS, noticeRate } from './hunt-rules.js?v=0.2.0';
 // crow caws, warns its neighbours and flies off. Shot crows tumble down.
 
 // Perches, found once per map: ray-cast down onto every building, lamp and
-// pole the player collides with, plus open ground for pecking.
-export function findPerches({ colliders, solids, bounds, groundHeight, canStand, rand }) {
+// pole the player collides with, every overhead wire, and open ground for
+// pecking. A perch may carry `yaw`, the way a crow there faces.
+export function findPerches({ colliders, solids, bounds, groundHeight, canStand, rand, wires = [] }) {
   const ray = new T.Raycaster(), down = new T.Vector3(0, -1, 0), perches = [];
-  const probe = (x, z, kind) => {
+  const probe = (x, z, kind, yaw) => {
     ray.set(new T.Vector3(x, 90, z), down); ray.far = 100;
     const hit = ray.intersectObjects(solids, false)[0];
     if (!hit || hit.point.y < 2.2) return;
     const normal = hit.face ? hit.face.normal.clone().transformDirection(hit.object.matrixWorld) : down.clone().negate();
     if (normal.y < .45) return;
-    perches.push({ x, y: hit.point.y, z, kind, taken: false });
+    perches.push({ x, y: hit.point.y, z, kind, yaw, taken: false });
   };
   for (const c of colliders) {
     if (c.r !== undefined) { if (['lamp', 'pole'].includes(c.kind)) probe(c.x + (rand() - .5) * .3, c.z + (rand() - .5) * .3, 'lamp'); continue; }
     if (c.w * c.d < 12) continue;
     // Along the roof edge, where a crow can be seen (and shot) from the street.
-    const n = Math.min(8, Math.max(2, Math.round((c.w + c.d) / 8)));
-    for (let i = 0; i < n; i++) {
-      const side = Math.floor(rand() * 4), t = rand() - .5, inset = .7;
-      const x = side < 2 ? c.x + t * (c.w - 2 * inset) : c.x + (side === 2 ? -1 : 1) * (c.w / 2 - inset);
-      const z = side < 2 ? c.z + (side === 0 ? -1 : 1) * (c.d / 2 - inset) : c.z + t * (c.d - 2 * inset);
-      probe(x, z, 'roof');
+    // Rows along each edge, facing out over the street.
+    for (let side = 0; side < 4; side++) {
+      const along = side < 2 ? c.w : c.d, n = Math.min(10, Math.max(1, Math.round(along / 3.2))), inset = .7;
+      for (let i = 0; i < n; i++) {
+        const t = (i + .5) / n - .5 + (rand() - .5) * .06;
+        const x = side < 2 ? c.x + t * (c.w - 2 * inset) : c.x + (side === 2 ? -1 : 1) * (c.w / 2 - inset);
+        const z = side < 2 ? c.z + (side === 0 ? -1 : 1) * (c.d / 2 - inset) : c.z + t * (c.d - 2 * inset);
+        probe(x, z, 'roof', [0, Math.PI, Math.PI / 2, -Math.PI / 2][side] + (rand() - .5) * .8);
+      }
+    }
+  }
+  // Overhead lines sag between poles; crows sit along them a metre apart.
+  for (const { a, b, sag } of wires) for (let k = 0; k < a.length; k++) {
+    const p = a[k], q = b[k], length = Math.hypot(q[0] - p[0], q[2] - p[2]), across = Math.atan2(q[0] - p[0], q[2] - p[2]) + Math.PI / 2;
+    for (let t = .12; t < .88; t += 1.1 / length) {
+      if (rand() < .35) continue;
+      perches.push({ x: p[0] + (q[0] - p[0]) * t, y: p[1] + (q[1] - p[1]) * t - sag * 4 * t * (1 - t), z: p[2] + (q[2] - p[2]) * t, kind: 'wire', yaw: across + (rand() < .5 ? 0 : Math.PI), taken: false });
     }
   }
   const area = (bounds.maxX - bounds.minX) * (bounds.maxZ - bounds.minZ);
@@ -63,7 +75,7 @@ function crowModel(toon) {
   const legs = [-1, 1].map(side => part(new T.CylinderGeometry(.012, .012, .14, 4), beakMat, side * .05, -.17, .02));
   for (const m of [torso, skull, beak, tail]) outline(m, 1.3);
   // Drawn a little larger than life so a crow on a roof reads at range.
-  body.scale.setScalar(1.3);
+  body.scale.setScalar(1.6);
   root.userData = { body, head, wings, legs };
   return root;
 }
@@ -82,14 +94,24 @@ export function createFlock({ scene, toon, perches, bounds, solids, groundHeight
     const list = pool.length ? pool : free;
     return list[Math.floor(Math.random() * list.length)];
   };
-  function spawn() {
-    const perch = freePerch();
+  // A crow either flies in from the edge of the city to `perch`, or (at the
+  // start of a mission) is already sitting there.
+  function spawn({ perch = freePerch(), perched = false, from = edgePoint() } = {}) {
     if (!perch) return null;
     perch.taken = true;
-    const model = crowModel(toon), pos = edgePoint();
+    const model = crowModel(toon), pos = perched ? new T.Vector3(perch.x, perch.y + .38, perch.z) : from.clone().add(new T.Vector3(rnd(-4, 4), rnd(-2, 2), rnd(-4, 4)));
     model.position.copy(pos); scene.add(model);
-    const crow = { model, pos, vel: new T.Vector3(), perch, state: 'arrive', aware: 0, flap: Math.random() * 6, timer: rnd(1.5, 4), circle: rnd(2, 6), circleAngle: Math.random() * Math.PI * 2, idle: 0, peck: 0, yaw: 0, alive: true, fall: 0 };
+    const crow = { model, pos, vel: new T.Vector3(), perch, state: perched ? 'perch' : 'arrive', aware: 0, flap: Math.random() * 6, timer: rnd(1.5, 4), circle: rnd(2, 6), circleAngle: Math.random() * Math.PI * 2, idle: rnd(0, 2), peck: 0, yaw: perch.yaw ?? Math.random() * Math.PI * 2, alive: true, fall: 0 };
     crows.push(crow); return crow;
+  }
+  // Crows gather: a group takes neighbouring perches on one roof or wire.
+  function spawnGroup(count, perched = false) {
+    const first = freePerch();
+    if (!first) return [];
+    const near = perches.filter(p => p !== first && !p.taken && !p.cooldown && Math.hypot(p.x - first.x, p.z - first.z) < 9 && Math.abs(p.y - first.y) < 3)
+      .sort((a, b) => Math.hypot(a.x - first.x, a.z - first.z) - Math.hypot(b.x - first.x, b.z - first.z));
+    const from = edgePoint();
+    return [first, ...near.slice(0, count - 1)].map(perch => spawn({ perch, perched, from }));
   }
   function release(crow) { if (crow.perch) { crow.perch.taken = false; crow.perch.cooldown = 6; crow.perch = null; } }
   function flee(crow, from) {
@@ -137,8 +159,8 @@ export function createFlock({ scene, toon, perches, bounds, solids, groundHeight
         // A crow that sees a standing player on the way in sheers off.
         if (playerDist < 9 && !player.crouched) { events.push({ type: 'spotted', crow }); flee(crow, player.position); }
       } else if (crow.state === 'land') {
-        const p = crow.perch, dist = steer(crow, new T.Vector3(p.x, p.y + .31, p.z), 3, dt, 4);
-        if (dist < .15) { crow.state = 'perch'; crow.pos.set(p.x, p.y + .31, p.z); crow.vel.set(0, 0, 0); crow.idle = rnd(.5, 2); crow.yaw = Math.random() * Math.PI * 2; }
+        const p = crow.perch, dist = steer(crow, new T.Vector3(p.x, p.y + .38, p.z), 3, dt, 4);
+        if (dist < .15) { crow.state = 'perch'; crow.pos.set(p.x, p.y + .38, p.z); crow.vel.set(0, 0, 0); crow.idle = rnd(.5, 2); crow.yaw = p.yaw ?? Math.random() * Math.PI * 2; }
       } else if (crow.state === 'perch') {
         flapping = false;
         crow.aware = Math.max(0, Math.min(1.2, crow.aware + noticeRate({ distance: playerDist, ...player }) * dt));
@@ -148,7 +170,7 @@ export function createFlock({ scene, toon, perches, bounds, solids, groundHeight
           crow.yaw += (Math.atan2(-(player.position.x - crow.pos.x), -(player.position.z - crow.pos.z)) - crow.yaw + Math.PI * 3) % (Math.PI * 2) - Math.PI;
         } else if (crow.idle <= 0) {
           crow.idle = rnd(1, 3.5);
-          if (Math.random() < .4) crow.yaw += rnd(-1.2, 1.2);
+          if (Math.random() < .4) crow.yaw = (crow.perch?.yaw ?? crow.yaw) + rnd(-.9, .9);
           if (Math.random() < .35) crow.peck = .5;
           if (Math.random() < .12) events.push({ type: 'caw', crow, quiet: true });
         }
@@ -188,5 +210,5 @@ export function createFlock({ scene, toon, perches, bounds, solids, groundHeight
     }
     return events;
   }
-  return { crows, spawn, update, flee, kill, hitRadius: CROW_RADIUS };
+  return { crows, spawn, spawnGroup, update, flee, kill, hitRadius: CROW_RADIUS };
 }
