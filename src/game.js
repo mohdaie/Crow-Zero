@@ -1,8 +1,8 @@
 import * as T from 'three';
 import { safeSpawn, movePlayer, canStand } from './walk.js?v=0.1.0';
 import { CITY_PLAN } from './city-plan.js?v=0.2.0';
-import { SHOTGUN, MISSION, pelletOffsets, raySphere, pelletsKill, coverNear, stealthLabel, missionState, clock } from './hunt-rules.js?v=0.3.0';
-import { startAudio, sfx } from './sfx.js?v=0.3.0';
+import { SHOTGUN, SNIPER, bulletPath, MISSION, pelletOffsets, raySphere, pelletsKill, coverNear, stealthLabel, missionState, clock } from './hunt-rules.js?v=0.4.0';
+import { startAudio, sfx } from './sfx.js?v=0.4.0';
 const $ = id => document.getElementById(id), canvas = $('world');
 const encode = plan => btoa(Array.from(new TextEncoder().encode(JSON.stringify(plan)), c => String.fromCharCode(c)).join('')).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
@@ -21,8 +21,9 @@ try {
   if (!planFromHash(location.hash)) throw Error('Peta tidak sah. Betulkan masalah layout di editor.');
   const { makeWorld } = await import('./world.js?v=0.3.0');
   const { toon } = await import('./illustration.js?v=0.1.0');
-  const { findPerches, createFlock } = await import('./crows.js?v=0.3.0');
-  const { createShotgun } = await import('./shotgun.js?v=0.3.0');
+  const { findPerches, createFlock } = await import('./crows.js?v=0.4.0');
+  const { createShotgun } = await import('./shotgun.js?v=0.4.0');
+  const { createSniper } = await import('./sniper.js?v=0.4.0');
   const world = await makeWorld(canvas), { camera, renderer, scene, bounds, colliders } = world;
   camera.rotation.order = 'YXZ'; camera.fov = 70; camera.near = .05; camera.updateProjectionMatrix();
   renderer.autoClear = false;
@@ -32,12 +33,18 @@ try {
   scene.traverse(o => { if (o.isMesh && !o.isInstancedMesh && o.castShadow && o.material?.type !== 'ShaderMaterial') solids.push(o); });
   const perches = findPerches({ colliders, solids, bounds, groundHeight: world.groundHeight, canStand, rand: Math.random, wires: world.wires });
   const flock = createFlock({ scene, toon, perches, bounds, solids, groundHeight: world.groundHeight });
-  const gun = createShotgun(toon);
+  // Two weapons, each with its own model, rules and ammunition. `cycle` is
+  // the pump (shotgun) or the recoil recovery (Barrett) between shots.
+  const weapons = [
+    { id: 'shotgun', name: 'SENAPANG PATAH', rules: SHOTGUN, model: createShotgun(toon), mag: SHOTGUN.magazine, reserve: SHOTGUN.reserve, cycleTime: SHOTGUN.pumpTime },
+    { id: 'sniper', name: 'BARRETT M82', rules: SNIPER, model: createSniper(toon), mag: SNIPER.magazine, reserve: SNIPER.reserve, cycleTime: SNIPER.fireDelay }
+  ];
+  let w = weapons[0], nextWeapon = null, lowered = 0;
 
   // ------------------------------------------------------------ player state
   const position = safeSpawn(world.spawn, bounds, colliders);
   let yaw = world.spawn.heading + Math.PI, pitch = 0, eye = 1.65, crouched = false, aimHeld = false, aimToggle = false, aim = 0;
-  let mag = SHOTGUN.magazine, reserve = SHOTGUN.reserve, pump = -1, reloading = false, shellTimer = 0;
+  let pump = -1, reloading = false, shellTimer = 0;
   let kills = 0, shots = 0, fled = 0, timeLeft = MISSION.seconds, state = 'loading', spawnTimer = 4, kick = 0;
   // Trigger input: held (button, mouse or Space) keeps firing as each pump
   // finishes; a tap during the pump is kept briefly and fires when ready.
@@ -46,8 +53,11 @@ try {
   const ray = new T.Raycaster();
 
   // ---------------------------------------------------------------- HUD
-  $('mission-id').textContent = MISSION.id; $('mission-title').textContent = MISSION.title; $('brief-target').textContent = MISSION.target; $('start-title').textContent = MISSION.id + ' · ' + MISSION.title;
-  function hudAmmo() { $('mag').textContent = String(mag).padStart(2, '0'); $('reserve').textContent = '/ ' + reserve; $('ammo').classList.toggle('empty', mag === 0); }
+  $('mission-id').textContent = MISSION.id; $('mission-title').textContent = MISSION.title; $('brief-target').textContent = MISSION.target; $('brief-time').textContent = MISSION.seconds % 60 ? clock(MISSION.seconds) : MISSION.seconds / 60 + ' minit'; $('start-title').textContent = MISSION.id + ' · ' + MISSION.title;
+  function hudAmmo() {
+    $('mag').textContent = String(w.mag).padStart(2, '0'); $('reserve').textContent = '/ ' + w.reserve; $('ammo').classList.toggle('empty', w.mag === 0);
+    $('ammo').dataset.weapon = w.id; $('weapon-name').textContent = w.name;
+  }
   function hudCount() { $('count').textContent = `${kills} / ${MISSION.target}`; $('progress').style.width = Math.min(100, kills / MISSION.target * 100) + '%'; }
   let toastTimer = 0;
   function toast(text, seconds = 1.6) { $('toast').textContent = text; $('toast').classList.add('show'); toastTimer = seconds; }
@@ -73,20 +83,52 @@ try {
       mctx.beginPath(); mctx.arc(x, y, crow.state === 'perch' ? 8 : 6, 0, Math.PI * 2); mctx.fill();
     }
     mctx.save(); mctx.translate(W / 2, W / 2); mctx.rotate(-yaw);
-    mctx.fillStyle = '#e9b640'; mctx.strokeStyle = '#1d3a32'; mctx.lineWidth = 4; mctx.lineJoin = 'round';
+    mctx.fillStyle = '#ffd23f'; mctx.strokeStyle = '#141414'; mctx.lineWidth = 4; mctx.lineJoin = 'round';
     mctx.beginPath(); mctx.moveTo(0, -26); mctx.lineTo(18, 18); mctx.lineTo(0, 8); mctx.lineTo(-18, 18); mctx.closePath(); mctx.fill(); mctx.stroke(); mctx.restore();
   }
 
   // ------------------------------------------------------------ shooting
-  function spread() { return T.MathUtils.lerp(SHOTGUN.hipSpread, SHOTGUN.aimSpread, aim) * (stick.x || stick.z || keys.size ? 1.25 : 1); }
+  function spread() { return T.MathUtils.lerp(w.rules.hipSpread, w.rules.aimSpread, aim) * (stick.x || stick.z || keys.size ? 1.25 : 1); }
   // A tap that can't fire yet (mid-pump) is kept until the pump finishes.
-  function pullTrigger() { if (state === 'playing' && !fire()) queuedShot = (pump >= 0 ? (1 - pump) * SHOTGUN.pumpTime : 0) + .25; }
+  function pullTrigger() { if (state === 'playing' && !fire()) queuedShot = (pump >= 0 ? (1 - pump) * w.cycleTime : 0) + .25; }
   function fire() {
-    if (state !== 'playing' || pump >= 0) return false;
-    if (mag <= 0) { if (!reloading) { sfx.empty(); if (reserve > 0) startReload(); else toast('Peluru habis!'); } return false; }
-    reloading = false; gun.setReloading(false);
-    mag--; shots++; hudAmmo(); gun.fire(); sfx.shot(); kick = .035;
-    camera.updateMatrixWorld();
+    if (state !== 'playing' || pump >= 0 || lowered > 0 || nextWeapon) return false;
+    if (w.mag <= 0) { if (!reloading) { sfx.empty(); if (w.reserve > 0) startReload(); else toast('Peluru habis! Tukar senjata'); } return false; }
+    if (reloading && w.id === 'sniper') return false;
+    reloading = false; w.model.setReloading(false);
+    w.mag--; shots++; hudAmmo(); w.model.fire(); camera.updateMatrixWorld();
+    if (w.id === 'sniper') fireSniper(); else fireShotgun();
+    pump = 0;
+    return true;
+  }
+  // A crow falls: the score, the hit marker, and its neighbours take fright.
+  function downCrow(crow, dir) {
+    flock.kill(crow, dir); kills++;
+    for (const other of flock.crows) if (other.alive && other.pos.distanceTo(crow.pos) < 7) other.aware += .55;
+  }
+  function hearShot(radius, alarm) {
+    for (const crow of flock.crows) if (crow.alive && Math.hypot(crow.pos.x - position.x, crow.pos.z - position.z) < radius) {
+      if (crow.state === 'perch') crow.aware += alarm; else if (crow.state === 'arrive' && flock.flee(crow, camera.position)) fled++;
+    }
+  }
+  function announce(downed) { if (downed) { sfx.hit(); hitTimer = .35; hudCount(); toast(downed > 1 ? `+${downed} gagak!` : '+1 gagak', 1); } }
+  // The Barrett: one bullet straight down the scope, through up to three
+  // crows in a line until it meets a wall. Loud: crows far around hear it.
+  function fireSniper() {
+    sfx.sniper(); kick = .09;
+    const [ox, oy] = pelletOffsets(Math.random, 1, spread())[0];
+    const origin = camera.position.clone(), dir = new T.Vector3(Math.tan(ox), Math.tan(oy), -1).normalize().applyQuaternion(camera.quaternion);
+    ray.set(origin, dir); ray.far = SNIPER.range;
+    const wall = ray.intersectObjects(solids, false)[0]?.distance ?? Infinity;
+    const hits = flock.crows.filter(c => c.alive).map(c => [raySphere(origin, dir, c.pos, flock.hitRadius), c]).filter(([d]) => d < Infinity);
+    const downed = bulletPath(hits, wall);
+    for (const crow of downed) downCrow(crow, dir);
+    hearShot(SNIPER.noiseRadius, .9);
+    announce(downed.length);
+    if (downed.length > 1) toast(`Satu peluru, ${downed.length} gagak!`, 1.4);
+  }
+  function fireShotgun() {
+    sfx.shot(); kick = .035;
     const origin = camera.position.clone(), struck = new Map();
     for (const [ox, oy] of pelletOffsets(Math.random, SHOTGUN.pellets, spread())) {
       const dir = new T.Vector3(Math.tan(ox), Math.tan(oy), -1).normalize().applyQuaternion(camera.quaternion);
@@ -102,26 +144,29 @@ try {
     }
     let downed = 0;
     for (const [crow, { hits, dist, dir }] of struck) {
-      if (pelletsKill(dist, hits)) {
-        flock.kill(crow, dir); downed++; kills++;
-        // Crows nearby saw it fall.
-        for (const other of flock.crows) if (other.alive && other.pos.distanceTo(crow.pos) < 7) other.aware += .55;
-      } else if (flock.flee(crow, camera.position)) { fled++; toast('Kena sipi — gagak terlepas!'); }
+      if (pelletsKill(dist, hits)) { downCrow(crow, dir); downed++; }
+      else if (flock.flee(crow, camera.position)) { fled++; toast('Kena sipi — gagak terlepas!'); }
     }
     // The suppressor keeps the shot quiet: only crows close by hear it.
-    for (const crow of flock.crows) if (crow.alive && Math.hypot(crow.pos.x - position.x, crow.pos.z - position.z) < SHOTGUN.noiseRadius) {
-      if (crow.state === 'perch') crow.aware += .8; else if (crow.state === 'arrive' && flock.flee(crow, camera.position)) fled++;
-    }
-    if (downed) { sfx.hit(); hitTimer = .35; hudCount(); toast(downed > 1 ? `+${downed} gagak!` : '+1 gagak', 1); }
-    pump = 0; setTimeout(() => sfx.pump(), 120);
-    return true;
+    hearShot(SHOTGUN.noiseRadius, .8);
+    announce(downed);
+    setTimeout(() => sfx.pump(), 120);
   }
-  function startReload() { if (state !== 'playing' || reloading || mag >= SHOTGUN.magazine || reserve <= 0) return; reloading = true; shellTimer = SHOTGUN.shellTime; gun.setReloading(true); }
+  // Shotgun: one shell at a time. Barrett: a whole magazine in one go.
+  function startReload() {
+    if (state !== 'playing' || reloading || nextWeapon || w.mag >= w.rules.magazine || w.reserve <= 0) return;
+    reloading = true; shellTimer = w.id === 'sniper' ? SNIPER.reloadTime : SHOTGUN.shellTime; w.model.setReloading(true);
+    if (w.id === 'sniper') sfx.magOut();
+  }
+  function switchWeapon(to = weapons[(weapons.indexOf(w) + 1) % weapons.length]) {
+    if (state !== 'playing' || to === w || nextWeapon) return;
+    reloading = false; w.model.setReloading(false); queuedShot = 0; nextWeapon = to; sfx.shell();
+  }
   function toggleCrouch() { crouched = !crouched; $('crouch').classList.toggle('on', crouched); }
   function toggleAim() { aimToggle = !aimToggle; $('aim').classList.toggle('on', aimToggle); }
 
   // ------------------------------------------------------------- controls
-  const resize = () => { world.resize(); gun.resize(canvas.clientWidth / canvas.clientHeight); };
+  const resize = () => { world.resize(); for (const x of weapons) x.model.resize(canvas.clientWidth / canvas.clientHeight); };
   window.addEventListener('resize', resize); resize();
   const MOVE = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
   window.addEventListener('keydown', e => {
@@ -131,6 +176,9 @@ try {
     if (e.code === 'KeyC' || e.code === 'ControlLeft') toggleCrouch();
     if (e.code === 'Space') { e.preventDefault(); triggerHeld = true; pullTrigger(); }
     if (e.code === 'KeyP') setPaused(state === 'playing');
+    if (e.code === 'KeyQ') switchWeapon();
+    if (e.code === 'Digit1') switchWeapon(weapons[0]);
+    if (e.code === 'Digit2') switchWeapon(weapons[1]);
   });
   window.addEventListener('keyup', e => { keys.delete(e.code); if (e.code === 'Space') triggerHeld = false; });
   window.addEventListener('blur', () => { keys.clear(); stick.x = stick.z = 0; aimHeld = false; triggerHeld = false; });
@@ -144,7 +192,9 @@ try {
   });
   window.addEventListener('pointerup', e => { if (e.pointerType !== 'mouse') return; if (e.button === 0) triggerHeld = false; if (e.button === 2) aimHeld = false; });
   canvas.addEventListener('contextmenu', e => e.preventDefault());
-  const look = (dx, dy, k) => { const s = k * (1 - aim * .45); yaw -= dx * s; pitch = Math.max(-1.45, Math.min(1.45, pitch - dy * s)); lookDelta.x += dx; lookDelta.y += dy; };
+  canvas.addEventListener('wheel', e => { if (document.pointerLockElement === canvas) switchWeapon(); }, { passive: true });
+  // Turning slows with the zoom, so the scope stays steady.
+  const look = (dx, dy, k) => { const s = k * Math.max(.12, camera.fov / 70); yaw -= dx * s; pitch = Math.max(-1.45, Math.min(1.45, pitch - dy * s)); lookDelta.x += dx; lookDelta.y += dy; };
   // Some browsers report one huge jump right after the pointer locks; skip it.
   document.addEventListener('mousemove', e => { if (document.pointerLockElement === canvas && state === 'playing' && Math.abs(e.movementX) + Math.abs(e.movementY) < 300) look(e.movementX, e.movementY, .0022); });
   document.addEventListener('pointerlockchange', () => { triggerHeld = false; if (fine && document.pointerLockElement !== canvas && state === 'playing') setPaused(true); });
@@ -165,6 +215,7 @@ try {
   $('aim').addEventListener('pointerdown', e => { e.preventDefault(); toggleAim(); });
   $('reload').addEventListener('pointerdown', e => { e.preventDefault(); startReload(); });
   $('crouch').addEventListener('pointerdown', e => { e.preventDefault(); toggleCrouch(); });
+  $('swap').addEventListener('pointerdown', e => { e.preventDefault(); switchWeapon(); });
 
   function setPaused(on) {
     if (on && state === 'playing') { state = 'paused'; $('paused').hidden = false; keys.clear(); triggerHeld = false; if (document.pointerLockElement) document.exitPointerLock(); }
@@ -175,7 +226,8 @@ try {
   $('restart').onclick = $('again').onclick = () => location.reload();
   // The town already has crows when the mission starts: groups on roofs and wires.
   for (let i = 0; i < 40 && flock.crows.length < 16; i++) flock.spawnGroup(2 + Math.floor(Math.random() * 4), true);
-  $('go').onclick = () => { startAudio(); $('start').hidden = true; state = 'playing'; last = performance.now(); if (fine) canvas.requestPointerLock?.()?.catch?.(() => { }); toast('Cari gagak · sorok dan tembak senyap', 2.5); };
+  $('go').onclick = () => { startAudio(); $('start').hidden = true; state = 'playing'; last = performance.now(); if (fine) canvas.requestPointerLock?.()?.catch?.(() => { }); toast('Cari gagak · sorok dan tembak', 2.5); };
+  $('swap').dataset.next = 'sniper';
   $('loading').hidden = true; $('brief').hidden = false;
 
   function finish(result) {
@@ -189,7 +241,7 @@ try {
 
   // Test hooks for automated browser checks: read state and aim at a crow.
   globalThis.crowGame = {
-    ready: true, get state() { return state; }, get kills() { return kills; }, get ammo() { return [mag, reserve]; }, get perches() { return perches.length; },
+    ready: true, get state() { return state; }, get kills() { return kills; }, get ammo() { return [w.mag, w.reserve]; }, get weapon() { return w.id; }, swap: () => switchWeapon(), get perches() { return perches.length; },
     get crows() { return flock.crows.map(c => ({ state: c.state, aware: c.aware, x: c.pos.x, y: c.pos.y, z: c.pos.z })); },
     aimAt(i) { const c = flock.crows[i]; const d = c.pos.clone().sub(camera.position); yaw = Math.atan2(-d.x, -d.z); pitch = Math.atan2(d.y, Math.hypot(d.x, d.z)); },
     moveTo(x, z) { position.x = x; position.z = z; },
@@ -208,18 +260,24 @@ try {
     let dz = stick.z + Number(keys.has('KeyS') || keys.has('ArrowDown')) - Number(keys.has('KeyW') || keys.has('ArrowUp'));
     const length = Math.max(1, Math.hypot(dx, dz)); dx /= length; dz /= length;
     const moving = playing && Math.hypot(dx, dz) > .1;
-    aim = T.MathUtils.damp(aim, playing && (aimHeld || aimToggle) && !reloading ? 1 : 0, 12, dt);
+    aim = T.MathUtils.damp(aim, playing && (aimHeld || aimToggle) && !reloading && !nextWeapon ? 1 : 0, w.id === 'sniper' ? 9 : 12, dt);
+    // Switching: lower the gun in hand, swap, raise the other one.
+    if (nextWeapon) { lowered = Math.min(1, lowered + dt / .22); if (lowered >= 1) { w = nextWeapon; nextWeapon = null; pump = -1; hudAmmo(); $('swap').dataset.next = weapons[(weapons.indexOf(w) + 1) % weapons.length].id; } }
+    else lowered = Math.max(0, lowered - dt / .3);
     if (playing) {
       const speed = (crouched ? 1.9 : 4.2) * (1 - aim * .4);
       movePlayer(position, (dx * Math.cos(yaw) + dz * Math.sin(yaw)) * dt * speed, (-dx * Math.sin(yaw) + dz * Math.cos(yaw)) * dt * speed, bounds, colliders);
       timeLeft -= dt;
-      // Pump, then reload one shell at a time.
-      if (pump >= 0) { pump += dt / SHOTGUN.pumpTime; if (pump >= 1) pump = -1; }
+      // Pump or recoil, then reload: shells one by one, or a whole magazine.
+      if (pump >= 0) { pump += dt / w.cycleTime; if (pump >= 1) pump = -1; }
       if (reloading && pump < 0) {
         shellTimer -= dt;
-        if (shellTimer <= 0) {
-          if (mag < SHOTGUN.magazine && reserve > 0) { mag++; reserve--; hudAmmo(); sfx.shell(); gun.loadShell(); shellTimer = SHOTGUN.shellTime; }
-          if (mag >= SHOTGUN.magazine || reserve <= 0) { reloading = false; gun.setReloading(false); }
+        if (shellTimer <= 0 && w.id === 'sniper') {
+          const take = Math.min(SNIPER.magazine - w.mag, w.reserve); w.mag += take; w.reserve -= take; hudAmmo(); sfx.magIn();
+          reloading = false; w.model.setReloading(false);
+        } else if (shellTimer <= 0) {
+          if (w.mag < SHOTGUN.magazine && w.reserve > 0) { w.mag++; w.reserve--; hudAmmo(); sfx.shell(); w.model.loadShell(); shellTimer = SHOTGUN.shellTime; }
+          if (w.mag >= SHOTGUN.magazine || w.reserve <= 0) { reloading = false; w.model.setReloading(false); }
         }
       }
       queuedShot = Math.max(0, queuedShot - dt);
@@ -233,7 +291,9 @@ try {
     kick = T.MathUtils.damp(kick, 0, 8, dt);
     const ground = world.groundHeight(position.x, position.z);
     camera.position.set(position.x, ground + eye, position.z); camera.rotation.set(pitch + kick, yaw, 0);
-    camera.fov = 70 - aim * 22; camera.updateProjectionMatrix();
+    // The Barrett's scope zooms far in; the shotgun only narrows a little.
+    const scoped = w.id === 'sniper' && aim > .85;
+    camera.fov = w.id === 'sniper' ? T.MathUtils.lerp(70, SNIPER.zoomFov, Math.max(0, aim - .6) / .4) : 70 - aim * 22; camera.updateProjectionMatrix();
     const covered = coverNear(position.x, position.z, colliders);
     if (playing) {
       const events = flock.update(dt, at / 1000, { position: { x: position.x, y: ground + eye, z: position.z }, crouched, covered, moving });
@@ -246,7 +306,7 @@ try {
         }
         if (ev.type === 'caw') sfx.caw(volume * .3, pan, 1 + Math.floor(Math.random() * 2));
       }
-      const result = missionState({ kills, timeLeft, shells: mag + reserve + (pump >= 0 ? 1 : 0) });
+      const result = missionState({ kills, timeLeft, shells: weapons.reduce((n, x) => n + x.mag + x.reserve, 0) + (pump >= 0 ? 1 : 0) });
       if (result !== 'playing') finish(result);
     } else flock.update(0, at / 1000, { position: { x: 1e5, y: 0, z: 1e5 } });
 
@@ -255,7 +315,8 @@ try {
     const watched = flock.crows.some(c => c.alive && c.state === 'perch' && c.aware > .45);
     const label = watched ? 'GAGAK CURIGA' : stealthLabel(crouched, covered), pill = $('stealth');
     if (pill.dataset.label !== label) { pill.dataset.label = label; pill.className = 'hud card ' + (watched ? 'CURIGA' : label); $('stealth-text').textContent = label; }
-    $('fire').classList.toggle('busy', pump >= 0 || reloading);
+    $('fire').classList.toggle('busy', pump >= 0 || reloading || !!nextWeapon);
+    $('scope').hidden = !scoped; $('crosshair').hidden = scoped || (w.id === 'sniper' && aim > .5);
     const gap = Math.tan(spread()) / Math.tan(camera.fov * Math.PI / 360) * canvas.clientHeight / 2;
     const g = Math.max(7, gap), len = 13;
     chGap.l.style.cssText = `width:${len}px;height:2px;left:${-g - len}px;top:-1px`; chGap.r.style.cssText = `width:${len}px;height:2px;left:${g}px;top:-1px`;
@@ -265,8 +326,9 @@ try {
     drawMap();
 
     world.wind.value = at / 1000; world.updateGrass(at / 1000, position, camera.position);
-    gun.update(dt, { moving, aim, pumpProgress: pump, lookDelta }); lookDelta.x = lookDelta.y = 0;
-    renderer.clear(); renderer.render(scene, camera); renderer.clearDepth(); renderer.render(gun.scene, gun.camera);
+    w.model.update(dt, { moving, aim, pumpProgress: pump, lookDelta, lowered, reloadProgress: w.id === 'sniper' && reloading ? 1 - shellTimer / SNIPER.reloadTime : 0 }); lookDelta.x = lookDelta.y = 0;
+    renderer.clear(); renderer.render(scene, camera);
+    if (!scoped) { renderer.clearDepth(); renderer.render(w.model.scene, w.model.camera); }
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
