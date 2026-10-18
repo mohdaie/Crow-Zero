@@ -101,7 +101,7 @@ export function createFlock({ scene, toon, perches, bounds, solids, groundHeight
     perch.taken = true;
     const model = crowModel(toon), pos = perched ? new T.Vector3(perch.x, perch.y + .38, perch.z) : from.clone().add(new T.Vector3(rnd(-4, 4), rnd(-2, 2), rnd(-4, 4)));
     model.position.copy(pos); scene.add(model);
-    const crow = { model, pos, vel: new T.Vector3(), perch, state: perched ? 'perch' : 'arrive', aware: 0, flap: Math.random() * 6, timer: rnd(1.5, 4), circle: rnd(2, 6), circleAngle: Math.random() * Math.PI * 2, idle: rnd(0, 2), peck: 0, yaw: perch.yaw ?? Math.random() * Math.PI * 2, alive: true, fall: 0 };
+    const crow = { model, pos, vel: new T.Vector3(), perch, state: perched ? 'perch' : 'arrive', aware: 0, flap: Math.random() * 6, timer: rnd(1.5, 4), circle: rnd(2, 6), circleAngle: Math.random() * Math.PI * 2, idle: rnd(0, 2), peck: 0, yaw: perch.yaw ?? Math.random() * Math.PI * 2, alive: true, fall: 0, stay: rnd(25, 45), warned: false };
     crows.push(crow); return crow;
   }
   // Crows gather: a group takes neighbouring perches on one roof or wire.
@@ -160,7 +160,7 @@ export function createFlock({ scene, toon, perches, bounds, solids, groundHeight
         if (playerDist < 9 && !player.crouched) { events.push({ type: 'spotted', crow }); flee(crow, player.position); }
       } else if (crow.state === 'land') {
         const p = crow.perch, dist = steer(crow, new T.Vector3(p.x, p.y + .38, p.z), 3, dt, 4);
-        if (dist < .15) { crow.state = 'perch'; crow.pos.set(p.x, p.y + .38, p.z); crow.vel.set(0, 0, 0); crow.idle = rnd(.5, 2); crow.yaw = p.yaw ?? Math.random() * Math.PI * 2; }
+        if (dist < .15) { events.push({ type: 'landed', crow }); crow.state = 'perch'; crow.pos.set(p.x, p.y + .38, p.z); crow.vel.set(0, 0, 0); crow.idle = rnd(.5, 2); crow.yaw = p.yaw ?? Math.random() * Math.PI * 2; }
       } else if (crow.state === 'perch') {
         flapping = false;
         crow.aware = Math.max(0, Math.min(1.2, crow.aware + noticeRate({ distance: playerDist, ...player }) * dt));
@@ -175,11 +175,12 @@ export function createFlock({ scene, toon, perches, bounds, solids, groundHeight
           if (Math.random() < .12) events.push({ type: 'caw', crow, quiet: true });
         }
         if (crow.aware >= 1) { events.push({ type: 'spotted', crow }); flee(crow, player.position); }
-        crow.timer -= dt;
-        // Restless crows move to another perch after a while.
-        if (crow.state === 'perch' && crow.timer < -rnd(14, 30) && crow.aware < .3) {
-          const next = freePerch();
-          if (next) { release(crow); next.taken = true; crow.perch = next; crow.state = 'arrive'; crow.circle = rnd(0, 2); crow.timer = rnd(1.5, 4); crow.vel.set(0, 4, 0); }
+        // A crow only stays a while: it gets restless, then flies off for good.
+        crow.stay -= dt;
+        if (crow.state === 'perch' && crow.stay < 6 && !crow.warned) { crow.warned = true; events.push({ type: 'restless', crow }); }
+        if (crow.state === 'perch' && crow.stay <= 0) {
+          const away = new T.Vector3(crow.pos.x + rnd(-1, 1), crow.pos.y, crow.pos.z + rnd(-1, 1));
+          if (flee(crow, away)) events.push({ type: 'leave', crow });
         }
       } else if (crow.state === 'flee') {
         steer(crow, crow.goal, 13, dt, 3);
