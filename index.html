@@ -1,4 +1,9 @@
-<!doctype html><html lang="ms"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><meta name="theme-color" content="#ffd23f"><title>Crow-Zero · Operasi Gagak</title>
+<!doctype html><html lang="ms"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><meta name="theme-color" content="#ffd23f"><title>Operasi Gagak · Crow-Zero</title>
+<meta name="description" content="Operasi Gagak: hunt the city's crows with a silent shotgun or a Barrett M82.">
+<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="assets/icons/icon-192.png"><link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Operasi Gagak">
+<link rel="preload" as="image" href="assets/textures/title.webp">
+<script>/* Keep Chrome's install prompt for the PASANG button on the title screen. */addEventListener('beforeinstallprompt',e=>{e.preventDefault();globalThis.installPrompt=e;dispatchEvent(new Event('installprompt-ready'));});</script>
 <style>
 @font-face{font-family:Nunito;src:url(assets/fonts/nunito-latin.woff2) format("woff2");font-weight:200 1000;font-display:swap}
 /* The HUD is laid out in the mockup's own pixels (1672 × 941): one --u is one
@@ -99,6 +104,55 @@
 .weapons div:first-child{background:var(--mint)}.weapons div:last-child{background:var(--lilac)}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0;font-size:13px;font-weight:800}.stats div{border:3px solid var(--ink);border-radius:14px;padding:6px}.stats b{display:block;font-size:26px;font-weight:1000}
 .stats div:nth-child(1){background:var(--mint)}.stats div:nth-child(2){background:var(--blue)}.stats div:nth-child(3){background:var(--orange)}.stats div:nth-child(4){background:var(--yellow)}
+/* Title screen: the key art, the brief and the menu on its left. */
+#title{position:fixed;inset:0;z-index:6;background:#141414 url(assets/textures/title.webp) 62% 40%/cover no-repeat;display:flex;align-items:stretch}
+#title::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,#141414f0 0,#141414b0 34%,#14141400 62%);pointer-events:none}
+.title-side{position:relative;width:min(50vw,560px);padding:max(16px,3vh) max(18px,3vw);display:flex;flex-direction:column;gap:max(10px,1.8vh);overflow-y:auto;max-height:100%}
+.logo{align-self:flex-start;background:var(--yellow);border:4px solid var(--ink);border-radius:22px;box-shadow:7px 7px 0 var(--ink);padding:10px 22px 12px;transform:rotate(-2deg)}
+.logo b{display:block;font-size:clamp(28px,6.4vh,58px);font-weight:1000;line-height:.95;letter-spacing:1px}
+.logo small{display:block;font-size:clamp(10px,1.8vh,15px);font-weight:1000;letter-spacing:5px;margin-top:6px}
+.brief{padding:14px 18px;border-width:4px;border-radius:20px}
+.brief .tags{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tag{display:inline-block;font-size:12px;font-weight:1000;letter-spacing:1.5px;border:3px solid var(--ink);border-radius:10px;padding:2px 9px;background:var(--lilac)}
+.tag.level{background:var(--mint)}
+.brief h1{margin:8px 0 2px;font-size:clamp(20px,4vh,30px);font-weight:1000;line-height:1.1}
+.brief p{margin:4px 0 0;font-weight:700;font-size:clamp(12px,2.1vh,15px);line-height:1.4}
+.brief ul{margin:8px 0 0;padding-left:18px;font-weight:700;font-size:clamp(11px,1.9vh,13px);line-height:1.4}
+.menu{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.menu button,.dialog .menu button{font:1000 clamp(15px,2.6vh,19px) Nunito,system-ui;padding:12px 24px;border-radius:16px;border:3.5px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer;box-shadow:5px 5px 0 var(--ink);transition:transform .05s,box-shadow .05s}
+.menu button:active{transform:translate(5px,5px);box-shadow:0 0 0 var(--ink)}
+#go{background:var(--yellow);font-size:clamp(18px,3.4vh,24px);padding:14px 34px}
+#go:disabled{background:#ddd;color:#666;cursor:wait}
+#install{background:var(--lilac)}
+#loading{color:var(--paper);font-weight:800;font-size:13px;margin:0}
+#install-hint{padding:10px 14px;font-size:13px;font-weight:800;background:var(--blue)}
+#version{position:absolute;right:max(14px,2vw);bottom:max(12px,2vh);background:var(--ink);color:var(--paper);border:3px solid var(--paper);border-radius:14px;padding:4px 12px;font-size:13px;font-weight:1000;letter-spacing:1px}
+.weapons-mini{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.weapons-mini div{border:3px solid var(--ink);border-radius:12px;padding:6px 9px;font-size:clamp(11px,1.8vh,12.5px);font-weight:700;line-height:1.3}
+.weapons-mini b{display:block;font-size:clamp(12px,2vh,14px);font-weight:1000}
+.weapons-mini div:first-child{background:var(--mint)}.weapons-mini div:last-child{background:var(--lilac)}
+/* Short landscape phones: everything up to MULA fits without scrolling. */
+@media (max-height:520px){.brief ul,.weapons-mini{display:none}.title-side{width:min(58vw,560px);gap:8px;padding:10px 16px}
+  .logo{padding:6px 14px 8px;box-shadow:5px 5px 0 var(--ink)}.logo b{font-size:24px}.logo small{font-size:9px;letter-spacing:3px;margin-top:3px}
+  .brief{padding:9px 13px;border-width:3px}.brief h1{font-size:19px;margin-top:5px}.brief p{font-size:12.5px}.tag{font-size:10px;padding:1px 7px}
+  .menu{gap:9px}.menu button{font-size:14px;padding:8px 16px;box-shadow:4px 4px 0 var(--ink)}#go{font-size:17px;padding:9px 24px}
+  #version{font-size:11px;padding:2px 9px}
+  .overlay{padding:8px}.dialog{padding:10px 16px 12px;box-shadow:5px 5px 0 var(--ink)}#options .dialog{max-width:640px}#options h2{display:none}.dialog h1{font-size:20px;margin:0}
+  .field{margin-top:6px}.field>b{font-size:11px;margin-bottom:4px}#levels button{padding:6px 8px}#levels button small{font-size:10.5px}.dialog .row{margin-top:10px}.dialog button{padding:8px 22px;font-size:15px}}
+/* Options: volume and difficulty. */
+#options{z-index:7}
+.field{text-align:left;margin:14px 0 0}.field>b{display:block;font-size:13px;letter-spacing:2px;margin-bottom:6px}
+.volume-row{display:flex;align-items:center;gap:12px}.volume-row output{min-width:48px;font-weight:1000}
+input[type=range]{-webkit-appearance:none;appearance:none;flex:1;height:18px;border:3px solid var(--ink);border-radius:12px;background:#fff;box-shadow:3px 3px 0 var(--ink)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:30px;height:30px;border-radius:50%;background:var(--yellow);border:3px solid var(--ink);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:var(--yellow);border:3px solid var(--ink);cursor:pointer}
+#levels{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+#levels button{font:inherit;text-align:left;padding:10px;border:3px solid var(--ink);border-radius:14px;background:#fff;box-shadow:4px 4px 0 var(--ink);cursor:pointer;color:var(--ink)}
+#levels button b{display:block;font-size:16px;font-weight:1000}#levels button small{display:block;font-size:11.5px;font-weight:700;line-height:1.3;margin-top:3px}
+#levels button.on{background:var(--yellow);transform:translate(2px,2px);box-shadow:2px 2px 0 var(--ink)}
+#levels button:disabled{opacity:.55;cursor:not-allowed}
+#level-note{font-size:12px;font-weight:800;margin:8px 0 0;color:#8a4b00}
+#volume-test{font:900 13px Nunito,system-ui;padding:7px 12px;border:3px solid var(--ink);border-radius:12px;background:var(--blue);box-shadow:3px 3px 0 var(--ink);cursor:pointer}
 #rotate{display:none}
 [hidden]{display:none!important}
 .touch-only{display:none}
@@ -137,18 +191,32 @@
 <button id="swap" class="btn touch-only" data-next="sniper" aria-label="Tukar senjata">
   <svg class="ic-shotgun" viewBox="0 0 70 28" fill="#141414"><path d="M2 10h44l2-3h20v6H52l-3 3h-9v4l-5 1-1-4H24l-8 10H6l4-10H2z"/></svg>
   <svg class="ic-sniper" viewBox="0 0 70 28" fill="#141414"><path d="M22 2h22v3h-4v2h-6V5h-8l-2 2h-3V4zM1 11h8l3-2h44V8h13v5H56v2H40l-2 6h-5l1-6h-8l-6 11H8l5-11H1z"/></svg><span>TUKAR</span></button>
-<div id="start" class="overlay"><div class="dialog card">
-  <h2>MAJLIS BANDARAYA</h2><h1 id="start-title">MISI 01</h1>
-  <p id="loading">Memuatkan bandar…</p>
-  <div id="brief" hidden><p>Gagak rumah memenuhi bumbung dan wayar di bandar. Tembak <b id="brief-target">20</b> ekor dalam <b id="brief-time">2 minit</b>. Gagak tak banyak — dan tak tunggu lama.</p>
-  <div class="weapons"><div><b>Senapang patah</b>Senyap, sebaran peluru luas. Terbaik untuk jarak dekat.</div><div><b>Barrett M82</b>Teropong, tembus 3 gagak sebaris. Kuat — gagak sekeliling terkejut.</div></div>
-  <ul><li>Dengar <b>amaran</b>: “3 GAGAK DI KIRI ANDA”. Anak panah di tepi skrin tunjuk gagak di luar pandangan.</li><li><b>SOROK</b> di sebelah dinding, kereta atau pokok supaya gagak tidak nampak anda.</li><li>Tahan <b>TEMBAK</b> untuk terus menembak. <b>TUKAR</b> untuk tukar senjata.</li></ul>
-  <div class="row"><button id="go">MULA ▶</button></div></div>
+<div id="title">
+  <div class="title-side">
+    <div class="logo"><b>OPERASI<br>GAGAK</b><small>MAJLIS BANDARAYA</small></div>
+    <div class="brief card">
+      <div class="tags"><span class="tag" id="start-kicker">MISI 01</span><span class="tag level" id="title-level">BIASA</span></div>
+      <h1 id="start-title">Kawal kawasan pasar</h1>
+      <p>Gagak rumah memenuhi bumbung dan wayar di bandar. Tembak <b id="brief-target">20</b> ekor dalam <b id="brief-time">2 minit</b> — gagak tak tunggu lama.</p>
+      <div class="weapons-mini"><div><b>Senapang patah</b>Senyap, sebaran luas, jarak dekat.</div><div><b>Barrett M82</b>Teropong, tembus 3 gagak. Kuat bunyinya.</div></div>
+      <ul><li>Ikut <b>amaran</b> & anak panah: “3 GAGAK DI KIRI ANDA”.</li><li><b>SOROK</b> di tepi dinding, kereta atau pokok.</li><li>Tahan <b>TEMBAK</b> untuk terus menembak · <b>TUKAR</b> senjata.</li></ul>
+    </div>
+    <div class="menu"><button id="go" disabled>MULA ▶</button><button id="options-open">PILIHAN</button><button id="install" hidden>PASANG APP</button></div>
+    <p id="loading">Memuatkan bandar…</p>
+    <div id="install-hint" class="card" hidden>iPhone/iPad: buka di Safari, tekan <b>Kongsi</b> → <b>Tambah ke Skrin Utama</b>.</div>
+  </div>
+  <span id="version">v0.6.0</span>
+</div>
+<div id="options" class="overlay" hidden><div class="dialog card">
+  <h2>TETAPAN</h2><h1>Pilihan</h1>
+  <div class="field"><b>KELANTANGAN</b><div class="volume-row"><input id="volume" type="range" min="0" max="100" step="5" aria-label="Kelantangan"><output id="volume-value">80%</output><button id="volume-test">Uji bunyi</button></div></div>
+  <div class="field"><b>KESUKARAN · BILANGAN GAGAK</b><div id="levels"></div><p id="level-note" hidden>Kesukaran boleh ditukar sebelum misi bermula (Mula semula).</p></div>
+  <div class="row"><button id="options-close">SIAP</button></div>
 </div></div>
-<div id="paused" class="overlay" hidden><div class="dialog card"><h1>Jeda</h1><div class="row"><button id="resume">Sambung</button><button id="restart" class="ghost">Mula semula</button></div></div></div>
+<div id="paused" class="overlay" hidden><div class="dialog card"><h1>Jeda</h1><div class="row"><button id="resume">Sambung</button><button id="pause-options" class="ghost">Pilihan</button><button id="restart" class="ghost">Mula semula</button></div></div></div>
 <div id="end" class="overlay" hidden><div class="dialog card"><h2 id="end-kicker">MISI 01</h2><h1 id="end-title">MISI BERJAYA</h1><p id="end-text"></p>
   <div class="stats"><div>Gagak ditembak<b id="s-kills">0</b></div><div>Ketepatan<b id="s-acc">0%</b></div><div>Gagak terlepas<b id="s-fled">0</b></div><div>Masa<b id="s-time">0:00</b></div></div>
   <div class="row"><button id="again">Main lagi</button></div></div></div>
-<div id="rotate" class="overlay"><div class="dialog card"><h1>↻</h1><p>Pusingkan telefon ke mod melintang untuk bermain.</p></div></div>
-<script type="module" src="src/game.js?v=0.5.0"></script>
+<div id="rotate" class="overlay" style="z-index:9"><div class="dialog card"><h1>↻</h1><p>Pusingkan telefon ke mod melintang untuk bermain.</p></div></div>
+<script type="module" src="src/game.js?v=0.6.0"></script>
 </body></html>

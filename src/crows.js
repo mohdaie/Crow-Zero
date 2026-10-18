@@ -82,7 +82,8 @@ function crowModel(toon) {
 
 const rnd = (a, b) => a + Math.random() * (b - a);
 export function createFlock({ scene, toon, perches, bounds, solids, groundHeight }) {
-  const crows = [], ray = new T.Raycaster(), down = new T.Vector3(0, -1, 0);
+  // `settings.stay`: how long a perched crow stays, set by the difficulty.
+  const crows = [], ray = new T.Raycaster(), down = new T.Vector3(0, -1, 0), settings = { stay: [25, 45] };
   const centre = new T.Vector3((bounds.minX + bounds.maxX) / 2, 0, (bounds.minZ + bounds.maxZ) / 2);
   const reach = Math.max(bounds.maxX - bounds.minX, bounds.maxZ - bounds.minZ) / 2 + 40;
   const edgePoint = (y = rnd(22, 34)) => { const a = Math.random() * Math.PI * 2; return new T.Vector3(centre.x + Math.cos(a) * reach, y, centre.z + Math.sin(a) * reach); };
@@ -101,7 +102,7 @@ export function createFlock({ scene, toon, perches, bounds, solids, groundHeight
     perch.taken = true;
     const model = crowModel(toon), pos = perched ? new T.Vector3(perch.x, perch.y + .38, perch.z) : from.clone().add(new T.Vector3(rnd(-4, 4), rnd(-2, 2), rnd(-4, 4)));
     model.position.copy(pos); scene.add(model);
-    const crow = { model, pos, vel: new T.Vector3(), perch, state: perched ? 'perch' : 'arrive', aware: 0, flap: Math.random() * 6, timer: rnd(1.5, 4), circle: rnd(2, 6), circleAngle: Math.random() * Math.PI * 2, idle: rnd(0, 2), peck: 0, yaw: perch.yaw ?? Math.random() * Math.PI * 2, alive: true, fall: 0, stay: rnd(25, 45), warned: false };
+    const crow = { model, pos, vel: new T.Vector3(), perch, state: perched ? 'perch' : 'arrive', aware: 0, flap: Math.random() * 6, timer: rnd(1.5, 4), circle: rnd(2, 6), circleAngle: Math.random() * Math.PI * 2, idle: rnd(0, 2), peck: 0, yaw: perch.yaw ?? Math.random() * Math.PI * 2, alive: true, fall: 0, stay: rnd(...settings.stay), warned: false };
     crows.push(crow); return crow;
   }
   // Crows gather: a group takes neighbouring perches on one roof or wire.
@@ -211,5 +212,5 @@ export function createFlock({ scene, toon, perches, bounds, solids, groundHeight
     }
     return events;
   }
-  return { crows, spawn, spawnGroup, update, flee, kill, hitRadius: CROW_RADIUS };
+  return { crows, settings, spawn, spawnGroup, update, flee, kill, hitRadius: CROW_RADIUS };
 }

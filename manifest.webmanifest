@@ -1,0 +1,24 @@
+{
+  "name": "Operasi Gagak",
+  "short_name": "Op. Gagak",
+  "description": "Hunt the city's crows with a silent shotgun or a Barrett M82.",
+  "lang": "ms",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "landscape",
+  "background_color": "#141414",
+  "theme_color": "#ffd23f",
+  "categories": ["games"],
+  "icons": [
+    { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "assets/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    { "src": "assets/textures/title.webp", "sizes": "1672x941", "type": "image/webp", "form_factor": "wide", "label": "Operasi Gagak" }
+  ]
+}

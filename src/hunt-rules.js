@@ -71,6 +71,20 @@ export function stealthLabel(crouched, covered) {
   return crouched && covered ? 'TERSOROK' : crouched || covered ? 'SEPARA' : 'KELIHATAN';
 }
 
+// Game version, shown on the title screen (kept equal to package.json).
+export const VERSION = '0.6.0';
+
+// Difficulty is how many crows there are to find: more crows is easier.
+// `start` crows sit in town when the mission begins; then `base` (plus one
+// per 6 kills, up to `max`) are kept in town, arriving in groups of `group`
+// and each staying `stay` seconds before it flies off.
+export const DIFFICULTY = {
+  mudah: { label: 'MUDAH', note: 'Banyak gagak (12–18), lama hinggap', start: 14, base: 12, max: 18, group: [2, 4], stay: [35, 55] },
+  biasa: { label: 'BIASA', note: 'Gagak sederhana (7–12)', start: 8, base: 7, max: 12, group: [1, 3], stay: [25, 45] },
+  sukar: { label: 'SUKAR', note: 'Gagak sangat sedikit (4–7), cepat terbang', start: 5, base: 4, max: 7, group: [1, 2], stay: [16, 30] }
+};
+export const crowsWanted = (level, kills) => Math.min(level.max, level.base + Math.floor(kills / 6));
+
 // Mission: shoot `target` crows before the clock runs out.
 export const MISSION = { id: 'MISI 01', title: 'Kawal kawasan pasar', target: 20, seconds: 120 };
 
