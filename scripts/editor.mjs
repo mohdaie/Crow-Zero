@@ -1,8 +1,8 @@
 // Builds the map editor from the game's own layout code, so the editor's
 // footprints and checks always match the game. Usage:
-//   node scripts/editor.mjs                 -> tools/map-editor.html (full page)
+//   node scripts/editor.mjs                 -> editor/index.html (full page)
 //   node scripts/editor.mjs --artifact out  -> page body for a Claude artifact
-import { readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 const root = resolve(import.meta.dirname, '..');
 export async function buildEditor() {
@@ -17,7 +17,7 @@ const page = body => `<!doctype html>\n<html lang="en"><head><meta charset="utf-
 if (import.meta.url === `file://${process.argv[1]}`) {
   const body = await buildEditor(), at = process.argv.indexOf('--artifact');
   if (at > -1) await writeFile(process.argv[at + 1], body);
-  else await writeFile(resolve(root, 'tools/map-editor.html'), page(body));
+  else { await mkdir(resolve(root, 'editor'), { recursive: true }); await writeFile(resolve(root, 'editor/index.html'), page(body)); }
   console.log('Built the map editor.');
 }
 export { page };
