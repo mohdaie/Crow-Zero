@@ -29,3 +29,5 @@ The building factories, roads, trees, props, vehicles, textures, illustrated sha
 - `models/nur.glb` (v2.4): Nur's 3D model, made the same way as Amir's from the user's TRELLIS.2 export `sample_4.glb` (microsoft/TRELLIS.2-4B, MIT licence). It is 1.48 m tall, with a JPEG texture, weighted to the motion-capture skeleton. Its joints are in `models/nur.joints.json`.
 
 - `models/petrol-pump.glb` (v2.10): one pump (plinth, pedestal, head, mechanical counter, two hoses and nozzles) cut from the user-supplied `Vintage-Petronas-Station.glb` (Blender glTF export). Its 16 parts are merged into 6 meshes, one per material, about 6,700 triangles and 189 KB. The game recolours it with the town's cel materials and bakes it with the static scenery. The PETRONAS lettering on the canopy and pump toppers is canvas text drawn in `src/world.js`, not a logo file.
+
+- `assets/fonts/nunito-latin.woff2` (v0.3.0): the Nunito variable font (Latin subset) from Google Fonts, by Vernon Adams, Cyreal and Jacques Le Bailly, under the SIL Open Font License 1.1. Used for the game HUD.

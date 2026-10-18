@@ -8,7 +8,7 @@ try {
   }
   const {planFromHash}=await import('./town-layout.js?v=0.1.0');
   if(location.hash.includes('plan=')&&!planFromHash(location.hash))throw Error('Map tidak sah. Kembali ke editor dan betulkan masalah layout.');
-  const {makeWorld}=await import('./world.js?v=0.1.0');
+  const {makeWorld}=await import('./world.js?v=0.3.0');
   const world=await makeWorld(canvas),{camera,renderer,scene,bounds,colliders}=world;
   const position=safeSpawn(world.spawn,bounds,colliders);let yaw=world.spawn.heading+Math.PI,pitch=0,last=performance.now();
   camera.rotation.order='YXZ';camera.fov=70;camera.updateProjectionMatrix();

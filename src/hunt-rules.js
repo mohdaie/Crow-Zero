@@ -6,13 +6,13 @@
 // brings a crow down; past `range` the shot has no effect.
 export const SHOTGUN = {
   pellets: 9, hipSpread: .05, aimSpread: .026, killRange: 34, range: 50,
-  magazine: 6, reserve: 36, pumpTime: .55, shellTime: .42,
+  magazine: 6, reserve: 42, pumpTime: .55, shellTime: .42,
   // A suppressed shot is heard by crows this close to the shooter.
   noiseRadius: 14
 };
 
 // Crow hit sphere: generous for a body plus spread wings.
-export const CROW_RADIUS = .5;
+export const CROW_RADIUS = .6;
 
 // Even spread over a disc: `rand` returns [0,1). Each pellet is [yaw, pitch]
 // offset from the aim direction.
@@ -63,7 +63,7 @@ export function stealthLabel(crouched, covered) {
 }
 
 // Mission: shoot `target` crows before the clock runs out.
-export const MISSION = { id: 'MISI 01', title: 'Bersihkan pusat bandar', target: 20, seconds: 300 };
+export const MISSION = { id: 'MISI 01', title: 'Kawal kawasan pasar', target: 30, seconds: 300 };
 export function missionState({ kills, timeLeft, shells }) {
   if (kills >= MISSION.target) return 'won';
   if (timeLeft <= 0) return 'time';

@@ -585,6 +585,8 @@ export async function makeWorld(canvas) {
   // Timber utility poles carry sagging phone and power lines along whichever
   // verge has more room; a pole is left out in a yard or a doorway, and the
   // line runs on over one missing pole.
+  // Spans of overhead line, kept for the crows that perch on them.
+  const wires=[];
   const inUnit=(x,z,pad)=>UNITS.some(u=>u.solids.some(([sx,sz,sw,sd])=>Math.abs(x-sx)<sw/2+pad&&Math.abs(z-sz)<sd/2+pad));
   for(const r of asphalt){
     const alongX=r.w>=r.d,length=alongX?r.w:r.d,half=(alongX?r.d:r.w)/2;
@@ -593,7 +595,7 @@ export async function makeWorld(canvas) {
     const [a,b]=[verge(-1),verge(1)],spots=a.length>=b.length?a:b;let last=null;
     for(const [x,z] of spots){
       const pole=props.pole(x,groundHeight(x,z),z,alongX);scene.add(pole.group);roundCollider(x,z,.15,'pole');
-      if(last&&Math.hypot(x-last.x,z-last.z)<41&&![.25,.5,.75].some(t=>inUnit(last.x+(x-last.x)*t,last.z+(z-last.z)*t,.2)))scene.add(props.wires(last.points,pole.points));
+      if(last&&Math.hypot(x-last.x,z-last.z)<41&&![.25,.5,.75].some(t=>inUnit(last.x+(x-last.x)*t,last.z+(z-last.z)*t,.2))){scene.add(props.wires(last.points,pole.points));wires.push({a:last.points,b:pole.points,sag:.7});}
       last={x,z,points:pole.points};
     }
   }
@@ -673,5 +675,5 @@ export async function makeWorld(canvas) {
   }
   storefronts.setTime(12*60);
   function resize(){const w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();inkViewport.set(w,h);}
-  return {scene,camera,renderer,colliders,groundHeight,resize,bounds:TOWN_BOUNDS,spawn:SPOTS.spawn,wind:trees.wind,updateGrass:lawn.update};
+  return {scene,camera,renderer,colliders,groundHeight,resize,bounds:TOWN_BOUNDS,spawn:SPOTS.spawn,wind:trees.wind,updateGrass:lawn.update,wires};
 }
