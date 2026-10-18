@@ -1,8 +1,8 @@
 import * as T from 'three';
 import { safeSpawn, movePlayer, canStand } from './walk.js?v=0.1.0';
 import { CITY_PLAN } from './city-plan.js?v=0.2.0';
-import { SHOTGUN, SNIPER, bulletPath, MISSION, pelletOffsets, raySphere, pelletsKill, coverNear, stealthLabel, missionState, clock } from './hunt-rules.js?v=0.4.0';
-import { startAudio, sfx } from './sfx.js?v=0.4.0';
+import { SHOTGUN, SNIPER, bulletPath, bearing, crowCallout, MISSION, pelletOffsets, raySphere, pelletsKill, coverNear, stealthLabel, missionState, clock } from './hunt-rules.js?v=0.5.0';
+import { startAudio, sfx } from './sfx.js?v=0.5.0';
 const $ = id => document.getElementById(id), canvas = $('world');
 const encode = plan => btoa(Array.from(new TextEncoder().encode(JSON.stringify(plan)), c => String.fromCharCode(c)).join('')).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
@@ -21,7 +21,7 @@ try {
   if (!planFromHash(location.hash)) throw Error('Peta tidak sah. Betulkan masalah layout di editor.');
   const { makeWorld } = await import('./world.js?v=0.3.0');
   const { toon } = await import('./illustration.js?v=0.1.0');
-  const { findPerches, createFlock } = await import('./crows.js?v=0.4.0');
+  const { findPerches, createFlock } = await import('./crows.js?v=0.5.0');
   const { createShotgun } = await import('./shotgun.js?v=0.4.0');
   const { createSniper } = await import('./sniper.js?v=0.4.0');
   const world = await makeWorld(canvas), { camera, renderer, scene, bounds, colliders } = world;
@@ -62,6 +62,21 @@ try {
   let toastTimer = 0;
   function toast(text, seconds = 1.6) { $('toast').textContent = text; $('toast').classList.add('show'); toastTimer = seconds; }
   let hitTimer = 0;
+  // Spotter callouts: where the crows are, relative to where you face, with a
+  // ping. Urgent ones (behind you, about to fly, very close) flash red.
+  let alertTimer = 0, calloutTimer = 3;
+  function alert(text, angle, urgent = false) {
+    const el = $('alert'); $('alert-text').textContent = text; $('alert-arrow').style.transform = `rotate(${angle}rad)`;
+    el.classList.toggle('urgent', urgent); el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+    alertTimer = urgent ? 3 : 2.6; sfx.ping(urgent);
+  }
+  const huntable = () => flock.crows.filter(c => c.alive && c.state !== 'flee' && c.state !== 'dead');
+  const me = () => ({ x: position.x, z: position.z, yaw });
+  function callout() {
+    const call = crowCallout(me(), huntable().map(c => c.pos));
+    if (call) alert(call.text, call.angle, call.side === 'belakang' || call.nearest < 12);
+    else alert('TIADA GAGAK DEKAT — CARI DI BUMBUNG', 0);
+  }
   hudAmmo(); hudCount();
 
   // Minimap: a pre-drawn town at 3.75 px/m, scrolled under the player.
@@ -207,11 +222,15 @@ try {
   joy.onpointerdown = e => { joyId = e.pointerId; joy.setPointerCapture(e.pointerId); updateStick(e); };
   joy.onpointermove = e => { if (e.pointerId === joyId) updateStick(e); };
   const stopStick = () => { joyId = null; stick.x = stick.z = 0; knob.style.transform = ''; }; joy.onpointerup = stopStick; joy.onpointercancel = stopStick;
-  // The fire button also looks: drag from it to adjust aim while shooting.
-  let fireDrag = null;
-  $('fire').addEventListener('pointerdown', e => { e.preventDefault(); $('fire').setPointerCapture(e.pointerId); fireDrag = { id: e.pointerId, x: e.clientX, y: e.clientY }; $('fire').classList.add('down'); triggerHeld = true; pullTrigger(); });
-  $('fire').addEventListener('pointermove', e => { if (fireDrag?.id !== e.pointerId || state !== 'playing') return; look(e.clientX - fireDrag.x, e.clientY - fireDrag.y, .0045); fireDrag.x = e.clientX; fireDrag.y = e.clientY; });
-  for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) $('fire').addEventListener(ev, () => { fireDrag = null; triggerHeld = false; $('fire').classList.remove('down'); });
+  // Two fire buttons, one for each thumb. Each also looks: drag from it to
+  // adjust aim while shooting. The trigger is held while either is down.
+  const firing = new Set();
+  for (const button of [$('fire'), $('fire-left')]) {
+    let drag = null;
+    button.addEventListener('pointerdown', e => { e.preventDefault(); button.setPointerCapture(e.pointerId); drag = { id: e.pointerId, x: e.clientX, y: e.clientY }; button.classList.add('down'); firing.add(button); triggerHeld = true; pullTrigger(); });
+    button.addEventListener('pointermove', e => { if (drag?.id !== e.pointerId || state !== 'playing') return; look(e.clientX - drag.x, e.clientY - drag.y, .0045); drag.x = e.clientX; drag.y = e.clientY; });
+    for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) button.addEventListener(ev, () => { drag = null; button.classList.remove('down'); firing.delete(button); triggerHeld = firing.size > 0; });
+  }
   $('aim').addEventListener('pointerdown', e => { e.preventDefault(); toggleAim(); });
   $('reload').addEventListener('pointerdown', e => { e.preventDefault(); startReload(); });
   $('crouch').addEventListener('pointerdown', e => { e.preventDefault(); toggleCrouch(); });
@@ -224,8 +243,8 @@ try {
   $('pause').onclick = () => setPaused(state === 'playing');
   $('resume').onclick = () => setPaused(false);
   $('restart').onclick = $('again').onclick = () => location.reload();
-  // The town already has crows when the mission starts: groups on roofs and wires.
-  for (let i = 0; i < 40 && flock.crows.length < 16; i++) flock.spawnGroup(2 + Math.floor(Math.random() * 4), true);
+  // Crows are scarce: a few on roofs and wires at the start, alone or in small groups.
+  for (let i = 0; i < 40 && flock.crows.length < 8; i++) flock.spawnGroup(1 + Math.floor(Math.random() * 3), true);
   $('go').onclick = () => { startAudio(); $('start').hidden = true; state = 'playing'; last = performance.now(); if (fine) canvas.requestPointerLock?.()?.catch?.(() => { }); toast('Cari gagak · sorok dan tembak', 2.5); };
   $('swap').dataset.next = 'sniper';
   $('loading').hidden = true; $('brief').hidden = false;
@@ -246,12 +265,13 @@ try {
     aimAt(i) { const c = flock.crows[i]; const d = c.pos.clone().sub(camera.position); yaw = Math.atan2(-d.x, -d.z); pitch = Math.atan2(d.y, Math.hypot(d.x, d.z)); },
     moveTo(x, z) { position.x = x; position.z = z; },
     // Fast-forward the flock (crouched, hidden player) without rendering.
-    step(seconds) { for (let t = 0; t < seconds; t += .05) { if (flock.crows.filter(c => c.alive).length < 18) flock.spawnGroup(3); flock.update(.05, t, { position: { x: position.x, y: 1, z: position.z }, crouched: true, covered: true, moving: false }); } },
-    fire: () => fire(), setCrouch(on) { if (crouched !== on) toggleCrouch(); }, setAim(on) { if (aimToggle !== on) toggleAim(); }
+    step(seconds) { for (let t = 0; t < seconds; t += .05) { if (flock.crows.filter(c => c.alive).length < 10) flock.spawnGroup(2); flock.update(.05, t, { position: { x: position.x, y: 1, z: position.z }, crouched: true, covered: true, moving: false }); } },
+    fire: () => fire(), callout: () => callout(), setCrouch(on) { if (crouched !== on) toggleCrouch(); }, setAim(on) { if (aimToggle !== on) toggleAim(); }
   };
 
   // ---------------------------------------------------------------- frame
   let last = performance.now();
+  const edgeArrows = [...$('edges').children];
   const chGap = { l: $('ch-l'), r: $('ch-r'), t: $('ch-t'), b: $('ch-b') };
   function frame(at) {
     const dt = Math.max(0, Math.min(.05, (at - last) / 1000)); last = at;
@@ -282,10 +302,11 @@ try {
       }
       queuedShot = Math.max(0, queuedShot - dt);
       if ((triggerHeld || queuedShot > 0) && pump < 0 && fire()) queuedShot = 0;
-      // Keep the town busy: groups fly in to replace crows shot or scared off.
-      const around = flock.crows.filter(c => c.alive && c.state !== 'flee').length, want = Math.min(28, 18 + Math.floor(kills / 5));
+      // Scarce crows: a few at a time fly in to replace the ones shot or gone.
+      const around = flock.crows.filter(c => c.alive && c.state !== 'flee').length, want = Math.min(12, 7 + Math.floor(kills / 6));
       spawnTimer -= dt;
-      if (around < want && spawnTimer <= 0) { flock.spawnGroup(Math.min(want - around, 2 + Math.floor(Math.random() * 3))); spawnTimer = 2 + Math.random() * 3; }
+      if (around < want && spawnTimer <= 0) { flock.spawnGroup(Math.min(want - around, 1 + Math.floor(Math.random() * 3))); spawnTimer = 3.5 + Math.random() * 3; }
+      calloutTimer -= dt; if (calloutTimer <= 0) { callout(); calloutTimer = 5 + Math.random() * 2; }
     }
     eye = T.MathUtils.damp(eye, crouched ? 1.05 : 1.65, 10, dt);
     kick = T.MathUtils.damp(kick, 0, 8, dt);
@@ -305,6 +326,10 @@ try {
           for (const other of flock.crows) if (other !== ev.crow && other.alive && other.state === 'perch' && other.pos.distanceTo(ev.crow.pos) < 10) other.aware += .6;
         }
         if (ev.type === 'caw') sfx.caw(volume * .3, pan, 1 + Math.floor(Math.random() * 2));
+        const b = bearing(me(), ev.crow.pos), where = { depan: 'DI HADAPAN', kiri: 'DI KIRI', kanan: 'DI KANAN', belakang: 'DI BELAKANG' }[b.side];
+        if (ev.type === 'landed' && b.distance < 70 && alertTimer < 1.5) { alert(`GAGAK HINGGAP ${Math.round(b.distance)}M ${where}`, b.angle, b.side === 'belakang'); calloutTimer = 5; }
+        if (ev.type === 'restless' && b.distance < 80) { alert(`GAGAK ${Math.round(b.distance)}M ${where} AKAN TERBANG!`, b.angle, true); calloutTimer = 5; }
+        if (ev.type === 'leave') { fled++; sfx.flap(volume * .4, pan); }
       }
       const result = missionState({ kills, timeLeft, shells: weapons.reduce((n, x) => n + x.mag + x.reserve, 0) + (pump >= 0 ? 1 : 0) });
       if (result !== 'playing') finish(result);
@@ -315,7 +340,7 @@ try {
     const watched = flock.crows.some(c => c.alive && c.state === 'perch' && c.aware > .45);
     const label = watched ? 'GAGAK CURIGA' : stealthLabel(crouched, covered), pill = $('stealth');
     if (pill.dataset.label !== label) { pill.dataset.label = label; pill.className = 'hud card ' + (watched ? 'CURIGA' : label); $('stealth-text').textContent = label; }
-    $('fire').classList.toggle('busy', pump >= 0 || reloading || !!nextWeapon);
+    for (const b of [$('fire'), $('fire-left')]) b.classList.toggle('busy', pump >= 0 || reloading || !!nextWeapon);
     $('scope').hidden = !scoped; $('crosshair').hidden = scoped || (w.id === 'sniper' && aim > .5);
     const gap = Math.tan(spread()) / Math.tan(camera.fov * Math.PI / 360) * canvas.clientHeight / 2;
     const g = Math.max(7, gap), len = 13;
@@ -323,6 +348,22 @@ try {
     chGap.t.style.cssText = `width:2px;height:${len}px;top:${-g - len}px;left:-1px`; chGap.b.style.cssText = `width:2px;height:${len}px;top:${g}px;left:-1px`;
     toastTimer -= dt; if (toastTimer <= 0) $('toast').classList.remove('show');
     hitTimer -= dt; $('hitmark').style.opacity = hitTimer > 0 ? 1 : 0;
+    alertTimer -= dt; if (alertTimer <= 0) $('alert').classList.remove('show');
+    // Edge arrows point to the nearest crows outside the view.
+    const halfH = Math.atan(Math.tan(camera.fov * Math.PI / 360) * camera.aspect) * .9;
+    // Crows in nearly the same direction share one arrow with a count.
+    const off = [];
+    if (playing) for (const b of huntable().map(c => ({ ...bearing(me(), c.pos), urgent: c.warned, count: 1 })).filter(b => b.distance < 70 && Math.abs(b.angle) > halfH).sort((a, b) => a.distance - b.distance)) {
+      const same = off.find(o => Math.abs(Math.atan2(Math.sin(o.angle - b.angle), Math.cos(o.angle - b.angle))) < .35);
+      if (same) { same.count++; same.urgent ||= b.urgent; } else if (off.length < 4) off.push(b);
+    }
+    edgeArrows.forEach((el, i) => {
+      const b = off[i]; el.hidden = !b; if (!b) return;
+      // On an ellipse kept clear of the top panels and the thumb controls.
+      const x = 50 + Math.sin(b.angle) * 31, y = 45 - Math.cos(b.angle) * 23;
+      el.style.left = x + '%'; el.style.top = y + '%'; el.style.setProperty('--a', b.angle + 'rad'); el.classList.toggle('urgent', b.urgent || b.distance < 15);
+      el.lastChild.textContent = (b.count > 1 ? b.count + ' · ' : '') + Math.round(b.distance) + 'm';
+    });
     drawMap();
 
     world.wind.value = at / 1000; world.updateGrass(at / 1000, position, camera.position);

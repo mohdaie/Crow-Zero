@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {SHOTGUN,SNIPER,bulletPath,CROW_RADIUS,pelletOffsets,raySphere,pelletsKill,noticeRate,coverNear,stealthLabel,missionState,MISSION,clock} from '../src/hunt-rules.js';
+import {SHOTGUN,SNIPER,bulletPath,bearing,crowCallout,CROW_RADIUS,pelletOffsets,raySphere,pelletsKill,noticeRate,coverNear,stealthLabel,missionState,MISSION,clock} from '../src/hunt-rules.js';
 import {planProblems} from '../src/town-layout.js';
 import {CITY_PLAN} from '../src/city-plan.js';
 import {derive} from '../src/town-layout.js';
@@ -52,5 +52,17 @@ test('sniper bullet passes through crows in a line, stops at walls and range',()
   assert.deepEqual(bulletPath(hits,50),['a','b']);
   assert.deepEqual(bulletPath([[SNIPER.range+1,'far']]),[]);
   assert.ok(SNIPER.noiseRadius>SHOTGUN.noiseRadius,'the Barrett is louder than the suppressed shotgun');
-  assert.equal(MISSION.seconds,120);
+  assert.equal(MISSION.seconds,120);assert.equal(MISSION.target,20);
+});
+test('callouts name the busiest direction relative to where the player faces',()=>{
+  // yaw 0 faces -z: ahead is -z, right is +x.
+  const me={x:0,z:0,yaw:0};
+  assert.equal(bearing(me,{x:0,z:-20}).side,'depan');assert.equal(bearing(me,{x:15,z:0}).side,'kanan');
+  assert.equal(bearing(me,{x:-15,z:0}).side,'kiri');assert.equal(bearing(me,{x:0,z:20}).side,'belakang');
+  assert.equal(crowCallout(me,[{x:0,z:-21}]).text,'1 GAGAK 20M DI HADAPAN');
+  assert.equal(crowCallout(me,[{x:-10,z:0},{x:-20,z:2},{x:-30,z:-3},{x:0,z:-15}]).text,'3 GAGAK DI KIRI ANDA');
+  assert.match(crowCallout(me,[{x:0,z:30},{x:2,z:25}]).text,/DI BELAKANG ANDA — PUSING!/);
+  // Turning 90° right puts a crow that was ahead on the left.
+  assert.equal(bearing({x:0,z:0,yaw:-Math.PI/2},{x:0,z:-20}).side,'kiri');
+  assert.equal(crowCallout(me,[{x:0,z:-500}]),null);
 });

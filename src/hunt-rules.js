@@ -72,7 +72,33 @@ export function stealthLabel(crouched, covered) {
 }
 
 // Mission: shoot `target` crows before the clock runs out.
-export const MISSION = { id: 'MISI 01', title: 'Kawal kawasan pasar', target: 30, seconds: 120 };
+export const MISSION = { id: 'MISI 01', title: 'Kawal kawasan pasar', target: 20, seconds: 120 };
+
+// Where a crow is from the player's point of view: `angle` is radians off
+// straight ahead (+ to the right), `side` one of the four callout sectors.
+export function bearing(player, crow) {
+  const dx = crow.x - player.x, dz = crow.z - player.z;
+  const right = dx * Math.cos(player.yaw) - dz * Math.sin(player.yaw), ahead = -dx * Math.sin(player.yaw) - dz * Math.cos(player.yaw);
+  const angle = Math.atan2(right, ahead), a = Math.abs(angle);
+  return { angle, distance: Math.hypot(dx, dz), side: a < .6 ? 'depan' : a > 2.4 ? 'belakang' : angle > 0 ? 'kanan' : 'kiri' };
+}
+const WHERE = { depan: 'DI HADAPAN', kiri: 'DI KIRI ANDA', kanan: 'DI KANAN ANDA', belakang: 'DI BELAKANG ANDA' };
+const round5 = d => Math.max(5, Math.round(d / 5) * 5);
+// The callout for the crows within `range`: the busiest direction, ties to
+// the nearest. One crow gets its distance; crows behind get a nudge to turn.
+export function crowCallout(player, crows, range = 70) {
+  const groups = {};
+  for (const c of crows) {
+    const b = bearing(player, c);
+    if (b.distance > range) continue;
+    const g = groups[b.side] ||= { side: b.side, count: 0, nearest: Infinity, angle: 0 };
+    g.count++; if (b.distance < g.nearest) { g.nearest = b.distance; g.angle = b.angle; }
+  }
+  const pick = Object.values(groups).sort((a, b) => b.count - a.count || a.nearest - b.nearest)[0];
+  if (!pick) return null;
+  const text = pick.count === 1 ? `1 GAGAK ${round5(pick.nearest)}M ${WHERE[pick.side]}` : `${pick.count} GAGAK ${WHERE[pick.side]}`;
+  return { ...pick, text: pick.side === 'belakang' ? text + ' — PUSING!' : text };
+}
 // The crows a sniper bullet brings down: every crow along the ray, nearest
 // first, up to the first wall and at most `pierce` of them. `hits` are
 // [distance, crow] pairs; `wall` is the distance to the first wall.

@@ -39,7 +39,7 @@
 #crosshair{left:50%;top:50%;width:0;height:0}
 #crosshair i{position:absolute;background:#fff;box-shadow:0 0 0 1.5px var(--ink);border-radius:2px}
 #hitmark{left:50%;top:50%;width:0;height:0;opacity:0;transition:opacity .2s}#hitmark::before,#hitmark::after{content:"";position:absolute;left:-16px;top:-2.5px;width:32px;height:5px;background:var(--red);border:1.5px solid var(--ink);border-radius:3px;transform:rotate(45deg)}#hitmark::after{transform:rotate(-45deg)}
-#toast{top:28%;left:50%;transform:translateX(-50%) rotate(-1.5deg);padding:calc(8*var(--t)) calc(26*var(--t));border-radius:calc(30*var(--t));font-size:max(13px,calc(25*var(--t)));font-weight:1000;opacity:0;transition:opacity .25s;white-space:nowrap;background:var(--yellow)}#toast.show{opacity:1}
+#toast{top:64%;left:50%;transform:translateX(-50%) rotate(-1.5deg);padding:calc(8*var(--t)) calc(26*var(--t));border-radius:calc(30*var(--t));font-size:max(13px,calc(25*var(--t)));font-weight:1000;opacity:0;transition:opacity .25s;white-space:nowrap;background:var(--yellow)}#toast.show{opacity:1}
 #ammo{right:calc(27*var(--t));bottom:calc(15*var(--t));width:calc(250*var(--t));padding:calc(8*var(--t)) calc(16*var(--t)) calc(6*var(--t));display:flex;flex-direction:column;align-items:center;font-variant-numeric:tabular-nums}
 #weapon-name{font-size:calc(14*var(--t));font-weight:1000;letter-spacing:calc(2*var(--t));background:var(--ink);color:var(--paper);border-radius:calc(8*var(--t));padding:calc(2*var(--t)) calc(10*var(--t))}
 #ammo .row{display:flex;align-items:center;gap:calc(14*var(--t));font-size:calc(38*var(--t));font-weight:1000;line-height:1.15}
@@ -55,6 +55,9 @@
 #fire{right:calc(134*var(--t));bottom:calc(331*var(--t));width:calc(170*var(--t));height:calc(170*var(--t));font-size:calc(27*var(--t));background:var(--red)}
 #reload{right:calc(94*var(--t));bottom:calc(179*var(--t));width:calc(115*var(--t));height:calc(115*var(--t));font-size:calc(15*var(--t));background:var(--yellow)}
 #reload svg{width:34%;height:34%}
+/* Left thumb's fire button, beside the joystick (anchored to the left edge). */
+#fire-left{left:calc(405*var(--t));bottom:calc(150*var(--t));width:calc(130*var(--t));height:calc(130*var(--t));font-size:calc(20*var(--t));background:var(--red);transform:translate(-50%,50%)}
+#fire-left.down,#fire-left:active{transform:translate(calc(-50% + var(--sh)),calc(50% + var(--sh)))}
 #crouch{right:calc(300*var(--t));bottom:calc(200*var(--t));width:calc(104*var(--t));height:calc(104*var(--t));font-size:calc(16*var(--t));background:var(--mint)}
 #swap{right:calc(332*var(--t));bottom:calc(66*var(--t));width:calc(96*var(--t));height:calc(96*var(--t));font-size:calc(15*var(--t));background:var(--lilac)}
 #swap svg{width:70%;height:26%}
@@ -62,6 +65,21 @@
 #joystick .arrows{position:absolute;inset:0;pointer-events:none}
 #knob{width:44%;height:44%;border-radius:50%;background:var(--yellow);border:var(--bw) solid var(--ink);box-shadow:calc(3*var(--t)) calc(3*var(--t)) 0 var(--ink);pointer-events:none}
 .pill{left:50%;bottom:calc(24*var(--t));transform:translateX(-50%);height:max(26px,calc(42*var(--t)));padding:0 calc(24*var(--t));border-radius:calc(22*var(--t));display:flex;align-items:center;gap:calc(22*var(--t));font-size:max(11px,calc(18*var(--t)));font-weight:900;color:var(--paper);background:var(--ink);white-space:nowrap}
+/* Spotter callout under the timer: orange; urgent ones red, flashing. */
+#alert{left:50%;top:calc(150*var(--t));transform:translateX(-50%) scale(.6);opacity:0;display:flex;align-items:center;gap:calc(14*var(--t));padding:calc(8*var(--t)) calc(24*var(--t)) calc(8*var(--t)) calc(10*var(--t));border-radius:calc(30*var(--t));background:var(--orange);font-size:max(13px,calc(28*var(--t)));font-weight:1000;letter-spacing:calc(1*var(--t));white-space:nowrap;transition:opacity .2s,transform .2s}
+#alert.show{opacity:1;transform:translateX(-50%) scale(1)}
+#alert .dir{width:calc(48*var(--t));height:calc(48*var(--t));min-width:26px;min-height:26px;border-radius:50%;background:var(--ink);display:grid;place-items:center}
+#alert .dir svg{width:62%;height:62%;transition:transform .2s}
+#alert.urgent{background:var(--red);color:#fff;animation:flash .5s steps(2) 4}
+#alert.urgent.show{animation:flash .5s steps(2) 5,shake .35s 2}
+@keyframes flash{50%{background:var(--yellow);color:var(--ink)}}
+@keyframes shake{25%{transform:translateX(calc(-50% - 6px)) scale(1)}75%{transform:translateX(calc(-50% + 6px)) scale(1)}}
+/* Arrows on the screen edge toward crows outside the view. */
+.edge{position:fixed;z-index:2;pointer-events:none;transform:translate(-50%,-50%);display:grid;place-items:center;font-size:max(10px,calc(17*var(--t)));font-weight:1000}
+.edge svg{width:max(26px,calc(48*var(--t)));height:max(26px,calc(48*var(--t)));transform:rotate(var(--a));filter:drop-shadow(3px 3px 0 var(--ink))}
+.edge span{background:var(--paper);border:2px solid var(--ink);border-radius:10px;padding:0 6px;margin-top:2px}
+.edge.urgent svg{animation:blink .4s steps(2) infinite}.edge.urgent span{background:var(--red);color:#fff}
+@keyframes blink{50%{opacity:.35}}
 /* Barrett scope: the world through a round lens, mil-dot reticle. */
 #scope{position:fixed;inset:0;z-index:1;pointer-events:none;--lens:min(44vh,44vw);background:radial-gradient(circle at 50% 50%,transparent 0 var(--lens),var(--ink) calc(var(--lens) + 1px))}
 #scope::before{content:"";position:absolute;left:50%;top:50%;width:calc(var(--lens) * 2);height:calc(var(--lens) * 2);transform:translate(-50%,-50%);border-radius:50%;box-shadow:inset 0 0 0 6px var(--ink),inset 0 0 40px 12px #0008}
@@ -94,7 +112,7 @@
 <canvas id="world"></canvas>
 <div id="scope" hidden><svg viewBox="-100 -100 200 200" fill="none" stroke="#141414"><path d="M-100 0h88M12 0h88M0-100v88M0 12v88" stroke-width="1"/><path d="M-100 0h60M40 0h60M0 40v60" stroke-width="3.5"/><g fill="#141414" stroke="none"><circle cx="-10" r="1.2"/><circle cx="-20" r="1.2"/><circle cx="-30" r="1.2"/><circle cx="10" r="1.2"/><circle cx="20" r="1.2"/><circle cx="30" r="1.2"/><circle cy="10" r="1.2"/><circle cy="20" r="1.2"/><circle cy="30" r="1.2"/><circle cy="-10" r="1.2"/><circle cy="-20" r="1.2"/><circle cy="-30" r="1.2"/></g><circle r="1" fill="#ff5c5c" stroke="none"/></svg></div>
 <div id="badge" class="hud card"><svg viewBox="0 0 56 60" fill="#141414"><path d="M28 2l3 6h-6zM23 9h10v9H23zM25.5 12h5v4h-5z" /><path d="M10 22h36l3 5H7zM12 28h4v20h-4zM20 28h4v20h-4zM32 28h4v20h-4zM40 28h4v20h-4zM6 50h44v4H6zM3 55h50v4H3z"/><path d="M26 30h4v18h-4z"/></svg><div><b>OPERASI GAGAK</b><small>MAJLIS BANDARAYA</small></div></div>
-<div id="mission" class="hud card"><b id="mission-id">MISI 01</b><div class="title" id="mission-title">Kawal kawasan pasar</div><div class="count"><svg viewBox="0 0 42 32" fill="#141414"><path d="M1 21c7-1 12-6 17-8 3-5 9-7 13-5l9-1-7 5c1 6-4 11-12 12l-5 7h-3l3-7c-6 0-11-1-15-3z"/></svg><span id="count">0 / 30</span></div><div class="bar"><i id="progress"></i></div></div>
+<div id="mission" class="hud card"><b id="mission-id">MISI 01</b><div class="title" id="mission-title">Kawal kawasan pasar</div><div class="count"><svg viewBox="0 0 42 32" fill="#141414"><path d="M1 21c7-1 12-6 17-8 3-5 9-7 13-5l9-1-7 5c1 6-4 11-12 12l-5 7h-3l3-7c-6 0-11-1-15-3z"/></svg><span id="count">0 / 20</span></div><div class="bar"><i id="progress"></i></div></div>
 <div id="timer" class="hud card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"><circle cx="12" cy="13" r="9"/><path d="M12 8v5l3 2M9 2h6"/></svg><span id="clock">02:00</span></div>
 <div id="stealth" class="hud card KELIHATAN"><svg viewBox="0 0 24 16" fill="none" stroke="currentColor" stroke-width="2.8"><path d="M1 8s4-7 11-7 11 7 11 7-4 7-11 7S1 8 1 8z"/><circle cx="12" cy="8" r="3"/></svg><span id="stealth-text">KELIHATAN</span></div>
 <div id="map" class="hud"><canvas id="minimap" width="300" height="300"></canvas></div><div id="north" class="hud">N</div>
@@ -102,6 +120,8 @@
 <div id="crosshair" class="hud"><i id="ch-l"></i><i id="ch-r"></i><i id="ch-t"></i><i id="ch-b"></i></div>
 <div id="hitmark" class="hud"></div>
 <div id="toast" class="hud card"></div>
+<div id="alert" class="hud card"><span class="dir"><svg id="alert-arrow" viewBox="0 0 24 24" fill="#ffd23f"><path d="M12 2l8 12h-5v8H9v-8H4z"/></svg></span><span id="alert-text"></span></div>
+<div id="edges"><div class="edge" hidden><svg viewBox="0 0 24 24" fill="#ff5c5c" stroke="#141414" stroke-width="2" stroke-linejoin="round"><path d="M12 2l9 18-9-5-9 5z"/></svg><span></span></div><div class="edge" hidden><svg viewBox="0 0 24 24" fill="#ff5c5c" stroke="#141414" stroke-width="2" stroke-linejoin="round"><path d="M12 2l9 18-9-5-9 5z"/></svg><span></span></div><div class="edge" hidden><svg viewBox="0 0 24 24" fill="#ff5c5c" stroke="#141414" stroke-width="2" stroke-linejoin="round"><path d="M12 2l9 18-9-5-9 5z"/></svg><span></span></div><div class="edge" hidden><svg viewBox="0 0 24 24" fill="#ff5c5c" stroke="#141414" stroke-width="2" stroke-linejoin="round"><path d="M12 2l9 18-9-5-9 5z"/></svg><span></span></div></div>
 <div id="ammo" class="hud card" data-weapon="shotgun"><span id="weapon-name">SENAPANG PATAH</span><div class="row">
   <svg class="ic-shotgun" viewBox="0 0 70 28" fill="#141414"><path d="M2 10h44l2-3h20v6H52l-3 3h-9v4l-5 1-1-4H24l-8 10H6l4-10H2z"/></svg>
   <svg class="ic-sniper" viewBox="0 0 70 28" fill="#141414"><path d="M22 2h22v3h-4v2h-6V5h-8l-2 2h-3V4zM1 11h8l3-2h44V8h13v5H56v2H40l-2 6h-5l1-6h-8l-6 11H8l5-11H1z"/></svg>
@@ -110,6 +130,7 @@
 <div id="hint2" class="hud pill desk">Klik untuk mula · WASD · Klik kiri tembak · Klik kanan bidik · R isi · C sorok · Q tukar senjata</div>
 <div id="joystick" class="touch-only" aria-label="Joystick pergerakan"><svg class="arrows" viewBox="0 0 100 100" fill="#141414"><path d="M50 8l6 7H44zM50 92l6-7H44zM8 50l7-6v12zM92 50l-7-6v12z"/></svg><div id="knob"></div></div>
 <button id="aim" class="btn touch-only"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="1" fill="currentColor"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/></svg><span>BIDIK</span></button>
+<button id="fire-left" class="btn touch-only" aria-label="Tembak (kiri)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><path d="M12 1.5v5M12 17.5v5M1.5 12h5M17.5 12h5"/></svg><span>TEMBAK</span></button>
 <button id="fire" class="btn touch-only"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><path d="M12 1.5v5M12 17.5v5M1.5 12h5M17.5 12h5"/></svg><span>TEMBAK</span></button>
 <button id="reload" class="btn touch-only"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 7q2-5 4 0v15H4zM10 7q2-5 4 0v15h-4zM16 7q2-5 4 0v15h-4z"/></svg><span>ISI SEMULA</span></button>
 <button id="crouch" class="btn touch-only"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="13" cy="4.5" r="2.8"/><path d="M9 9h7l1.5 6H14l1 7h-3.5l-1-5.5L8 17l-2-2 3-3z"/></svg><span>SOROK</span></button>
@@ -119,9 +140,9 @@
 <div id="start" class="overlay"><div class="dialog card">
   <h2>MAJLIS BANDARAYA</h2><h1 id="start-title">MISI 01</h1>
   <p id="loading">Memuatkan bandar…</p>
-  <div id="brief" hidden><p>Gagak rumah memenuhi bumbung dan wayar di bandar. Tembak <b id="brief-target">30</b> ekor dalam <b id="brief-time">2 minit</b>.</p>
+  <div id="brief" hidden><p>Gagak rumah memenuhi bumbung dan wayar di bandar. Tembak <b id="brief-target">20</b> ekor dalam <b id="brief-time">2 minit</b>. Gagak tak banyak — dan tak tunggu lama.</p>
   <div class="weapons"><div><b>Senapang patah</b>Senyap, sebaran peluru luas. Terbaik untuk jarak dekat.</div><div><b>Barrett M82</b>Teropong, tembus 3 gagak sebaris. Kuat — gagak sekeliling terkejut.</div></div>
-  <ul><li><b>SOROK</b> di sebelah dinding, kereta atau pokok supaya gagak tidak nampak anda.</li><li>Tahan <b>TEMBAK</b> untuk terus menembak. <b>TUKAR</b> untuk tukar senjata.</li></ul>
+  <ul><li>Dengar <b>amaran</b>: “3 GAGAK DI KIRI ANDA”. Anak panah di tepi skrin tunjuk gagak di luar pandangan.</li><li><b>SOROK</b> di sebelah dinding, kereta atau pokok supaya gagak tidak nampak anda.</li><li>Tahan <b>TEMBAK</b> untuk terus menembak. <b>TUKAR</b> untuk tukar senjata.</li></ul>
   <div class="row"><button id="go">MULA ▶</button></div></div>
 </div></div>
 <div id="paused" class="overlay" hidden><div class="dialog card"><h1>Jeda</h1><div class="row"><button id="resume">Sambung</button><button id="restart" class="ghost">Mula semula</button></div></div></div>
@@ -129,5 +150,5 @@
   <div class="stats"><div>Gagak ditembak<b id="s-kills">0</b></div><div>Ketepatan<b id="s-acc">0%</b></div><div>Gagak terlepas<b id="s-fled">0</b></div><div>Masa<b id="s-time">0:00</b></div></div>
   <div class="row"><button id="again">Main lagi</button></div></div></div>
 <div id="rotate" class="overlay"><div class="dialog card"><h1>↻</h1><p>Pusingkan telefon ke mod melintang untuk bermain.</p></div></div>
-<script type="module" src="src/game.js?v=0.4.0"></script>
+<script type="module" src="src/game.js?v=0.5.0"></script>
 </body></html>

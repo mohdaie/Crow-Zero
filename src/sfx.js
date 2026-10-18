@@ -37,6 +37,8 @@ export const sfx = {
   sniper() { if (!ctx) return; tone({ from: 90, to: 32, length: .5, volume: 1 }); burst({ length: .09, freq: 3000, q: .6, type: 'highpass', volume: .6 }); burst({ length: .9, freq: 420, q: .5, type: 'lowpass', volume: .9, decay: .9 }); burst({ at: .25, length: .8, freq: 260, q: .4, type: 'lowpass', volume: .25, decay: .8 }); },
   magOut() { if (!ctx) return; burst({ length: .04, freq: 1500, q: 5, volume: .5 }); burst({ at: .12, length: .05, freq: 900, q: 3, volume: .4 }); },
   magIn() { if (!ctx) return; burst({ length: .05, freq: 1100, q: 4, volume: .6 }); burst({ at: .18, length: .05, freq: 2000, q: 6, volume: .5 }); },
+  // Spotter ping: two quick radio beeps; urgent callouts get three, higher.
+  ping(urgent = false) { if (!ctx) return; const f = urgent ? 1500 : 1100; for (let i = 0; i < (urgent ? 3 : 2); i++) tone({ at: i * .11, from: f, length: .07, type: 'square', volume: .12 }); },
   pump() { if (!ctx) return; burst({ at: .05, length: .04, freq: 1800, q: 4, volume: .5 }); burst({ at: .26, length: .05, freq: 1300, q: 4, volume: .6 }); },
   shell() { if (!ctx) return; burst({ length: .03, freq: 2600, q: 6, volume: .35 }); },
   empty() { if (!ctx) return; burst({ length: .02, freq: 3200, q: 8, volume: .4 }); },
