@@ -6,9 +6,18 @@
 // brings a crow down; past `range` the shot has no effect.
 export const SHOTGUN = {
   pellets: 9, hipSpread: .05, aimSpread: .026, killRange: 34, range: 50,
-  magazine: 6, reserve: 42, pumpTime: .55, shellTime: .42,
+  magazine: 8, reserve: 96, pumpTime: .55, shellTime: .42,
   // A suppressed shot is heard by crows this close to the shooter.
   noiseRadius: 14
+};
+
+// Barrett M82: semi-automatic .50 rifle with a scope. One bullet, no spread
+// through the scope, and it carries on through up to `pierce` crows in a
+// line. It has no suppressor: every crow within `noiseRadius` hears it.
+export const SNIPER = {
+  magazine: 10, reserve: 30, fireDelay: .45, reloadTime: 2.4,
+  hipSpread: .06, aimSpread: 0, range: 300, pierce: 3, zoomFov: 10,
+  noiseRadius: 45
 };
 
 // Crow hit sphere: generous for a body plus spread wings.
@@ -63,7 +72,14 @@ export function stealthLabel(crouched, covered) {
 }
 
 // Mission: shoot `target` crows before the clock runs out.
-export const MISSION = { id: 'MISI 01', title: 'Kawal kawasan pasar', target: 30, seconds: 300 };
+export const MISSION = { id: 'MISI 01', title: 'Kawal kawasan pasar', target: 30, seconds: 120 };
+// The crows a sniper bullet brings down: every crow along the ray, nearest
+// first, up to the first wall and at most `pierce` of them. `hits` are
+// [distance, crow] pairs; `wall` is the distance to the first wall.
+export function bulletPath(hits, wall = Infinity, pierce = SNIPER.pierce, range = SNIPER.range) {
+  return hits.filter(([d]) => d < wall && d <= range).sort((a, b) => a[0] - b[0]).slice(0, pierce).map(([, crow]) => crow);
+}
+
 export function missionState({ kills, timeLeft, shells }) {
   if (kills >= MISSION.target) return 'won';
   if (timeLeft <= 0) return 'time';

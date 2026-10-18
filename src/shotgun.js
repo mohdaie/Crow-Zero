@@ -9,7 +9,7 @@ import { outline } from './illustration.js?v=0.1.0';
 
 // A side profile (points as [z, y], the gun pointing down -z) extruded
 // across x, centred on x = 0.
-function profile(points, width, bevel = .004) {
+export function profile(points, width, bevel = .004) {
   const shape = new T.Shape(points.map(([z, y]) => new T.Vector2(z, y)));
   const g = new T.ExtrudeGeometry(shape, { depth: width - bevel * 2, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 2, curveSegments: 6 });
   // rotateY(-90°) takes shape x to +z and the extrusion to -x, without
@@ -126,13 +126,14 @@ export function createShotgun(toon) {
     setReloading(on) { state.reloading = on; },
     loadShell() { state.reload = 1; },
     resize(aspect) { camera.aspect = aspect; camera.updateProjectionMatrix(); },
-    // `pumpProgress` 0…1 across the pump stroke; `aim` 0…1 blend to the bead.
-    update(dt, { moving, aim, pumpProgress, lookDelta }) {
+    // `pumpProgress` 0…1 across the pump stroke; `aim` 0…1 blend to the bead;
+    // `lowered` 0…1 drops the gun out of view while switching weapons.
+    update(dt, { moving, aim, pumpProgress, lookDelta, lowered = 0 }) {
       state.aim = aim; state.kick = Math.max(0, state.kick - dt * 6); state.puff = Math.max(0, state.puff - dt * 5);
       state.bob += dt * (moving ? 9 : 2); state.reload = Math.max(0, state.reload - dt * 3);
       const pos = hip.clone().lerp(aimed, aim), bobAmount = (moving ? .012 : .003) * (1 - aim * .8);
       pos.x += Math.sin(state.bob * .5) * bobAmount - lookDelta.x * .0015; pos.y += Math.abs(Math.cos(state.bob * .5)) * bobAmount + lookDelta.y * .0015;
-      pos.z += state.kick * .08;
+      pos.z += state.kick * .08; pos.y -= lowered * .35;
       rig.position.lerp(pos, 1 - Math.exp(-dt * 18));
       gun.rotation.x = .06 * (1 - aim) + state.kick * .2 + (state.reloading ? -.3 : 0) + state.reload * .08;
       gun.rotation.y = .2 * (1 - aim);

@@ -1,104 +1,133 @@
-<!doctype html><html lang="ms"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><meta name="theme-color" content="#1f4a3e"><title>Crow-Zero · Operasi Gagak</title>
+<!doctype html><html lang="ms"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><meta name="theme-color" content="#ffd23f"><title>Crow-Zero · Operasi Gagak</title>
 <style>
 @font-face{font-family:Nunito;src:url(assets/fonts/nunito-latin.woff2) format("woff2");font-weight:200 1000;font-display:swap}
 /* The HUD is laid out in the mockup's own pixels (1672 × 941): one --u is one
    mockup pixel, scaled to whichever side of the screen is tighter. */
-:root{--u:min(calc(100vh / 941),calc(100vw / 1672));--cream:#faf3df;--ink:#1d3a32;--green:#1f4a3e;--gold:#d6a83a;--red:#c8463a}
+:root{--u:min(calc(100vh / 941),calc(100vw / 1672))}
 @supports (height:100dvh){:root{--u:min(calc(100dvh / 941),calc(100vw / 1672))}}
 /* --t: never under half a pixel, so on phones text stays readable and buttons tappable.
-   Items on the right are anchored to the right edge, as phones are wider than the mockup. */
-:root{--t:max(var(--u),.5px)}
+   Items on the right are anchored to the right edge, as phones are wider than the mockup.
+   Rounded neobrutalism: flat bright fills, thick ink outlines, hard offset shadows. */
+:root{--t:max(var(--u),.5px);--ink:#141414;--paper:#fffaf0;--yellow:#ffd23f;--red:#ff5c5c;--mint:#6fe3b5;--blue:#7cc4ff;--lilac:#b9a6ff;--orange:#ffa94d;
+  --bw:max(2px,calc(4*var(--t)));--sh:max(3px,calc(6*var(--t)));--r:calc(20*var(--t))}
 *{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;background:#8ab8d1;font-family:Nunito,system-ui,sans-serif;font-weight:800;color:var(--ink);-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 #world{position:fixed;inset:0;width:100vw;height:100dvh;display:block;touch-action:none}
 .hud{position:fixed;pointer-events:none;z-index:2}
-.card{background:var(--cream);border:calc(3.5*var(--t)) solid var(--green);border-radius:calc(16*var(--t));box-shadow:0 calc(4*var(--t)) 0 #1d3a3233}
-#badge{left:calc(30*var(--t));top:calc(20*var(--t));white-space:nowrap;padding-right:calc(30*var(--t))!important;height:calc(85*var(--t));display:flex;align-items:center;gap:calc(14*var(--t));padding:0 calc(18*var(--t));background:var(--green);border:calc(3.5*var(--t)) solid var(--gold);border-radius:calc(16*var(--t));box-shadow:0 0 0 calc(2.5*var(--t)) var(--green),0 calc(5*var(--t)) 0 #1d3a3240;color:#fff}
-#badge svg{width:calc(56*var(--t));height:calc(60*var(--t));flex:none}
-#badge b{display:block;font-size:calc(38*var(--t));font-weight:900;letter-spacing:calc(1*var(--t));line-height:1}
-#badge small{display:block;color:var(--gold);font-size:calc(19*var(--t));font-weight:900;letter-spacing:calc(5*var(--t));line-height:1;margin-top:calc(6*var(--t))}
-#mission{left:calc(30*var(--t));top:calc(115*var(--t));width:calc(315*var(--t));padding:calc(12*var(--t)) calc(20*var(--t)) calc(14*var(--t))}
-#mission b{display:block;font-size:calc(25*var(--t));font-weight:900;line-height:1.1}
-#mission .title{font-size:calc(21*var(--t));font-weight:600;margin:calc(4*var(--t)) 0 calc(6*var(--t))}
-#mission .count{display:flex;align-items:center;gap:calc(12*var(--t));font-size:calc(25*var(--t));line-height:1}
+.card{background:var(--paper);border:var(--bw) solid var(--ink);border-radius:var(--r);box-shadow:var(--sh) var(--sh) 0 var(--ink)}
+#badge{left:calc(30*var(--t));top:calc(20*var(--t));height:calc(85*var(--t));display:flex;align-items:center;gap:calc(14*var(--t));padding:0 calc(28*var(--t)) 0 calc(18*var(--t));background:var(--yellow);white-space:nowrap}
+#badge svg{width:calc(52*var(--t));height:calc(56*var(--t));flex:none}
+#badge b{display:block;font-size:calc(38*var(--t));font-weight:1000;letter-spacing:calc(1*var(--t));line-height:1}
+#badge small{display:block;font-size:calc(17*var(--t));font-weight:900;letter-spacing:calc(5*var(--t));line-height:1;margin-top:calc(6*var(--t))}
+#mission{left:calc(30*var(--t));top:calc(125*var(--t));width:calc(315*var(--t));padding:calc(12*var(--t)) calc(18*var(--t)) calc(14*var(--t))}
+#mission b{display:inline-block;font-size:calc(20*var(--t));font-weight:1000;line-height:1;background:var(--lilac);border:calc(3*var(--t)) solid var(--ink);border-radius:calc(10*var(--t));padding:calc(4*var(--t)) calc(10*var(--t))}
+#mission .title{font-size:calc(21*var(--t));font-weight:800;margin:calc(8*var(--t)) 0 calc(8*var(--t))}
+#mission .count{display:flex;align-items:center;gap:calc(12*var(--t));font-size:calc(27*var(--t));font-weight:1000;line-height:1}
 #mission .count svg{width:calc(42*var(--t));height:calc(32*var(--t))}
-.bar{height:calc(20*var(--t));border:calc(3*var(--t)) solid var(--green);border-radius:calc(10*var(--t));margin-top:calc(10*var(--t));overflow:hidden;background:#e7e1cc}.bar i{display:block;height:100%;width:0;background:var(--gold);transition:width .3s}
-#timer{left:50%;top:calc(20*var(--t));transform:translateX(-50%);width:calc(215*var(--t));height:calc(56*var(--t));border-radius:calc(28*var(--t));display:flex;align-items:center;justify-content:center;gap:calc(16*var(--t));font-size:calc(35*var(--t));font-weight:800;font-variant-numeric:tabular-nums}
-#timer svg{width:calc(34*var(--t));height:calc(34*var(--t))}#timer.low{color:var(--red)}
-#stealth{left:50%;top:calc(86*var(--t));transform:translateX(-50%);padding:calc(3*var(--t)) calc(14*var(--t));border-radius:calc(20*var(--t));font-size:calc(15*var(--t));letter-spacing:calc(1.5*var(--t));display:flex;gap:calc(8*var(--t));align-items:center;border-width:calc(2.5*var(--t))}
+.bar{height:calc(22*var(--t));border:calc(3.5*var(--t)) solid var(--ink);border-radius:calc(12*var(--t));margin-top:calc(10*var(--t));overflow:hidden;background:#fff}
+.bar i{display:block;height:100%;width:0;background:repeating-linear-gradient(135deg,var(--mint) 0 calc(10*var(--t)),#4fd29f calc(10*var(--t)) calc(20*var(--t)));border-right:calc(3*var(--t)) solid var(--ink);transition:width .3s}
+#timer{left:50%;top:calc(20*var(--t));transform:translateX(-50%);width:calc(215*var(--t));height:calc(60*var(--t));border-radius:calc(30*var(--t));display:flex;align-items:center;justify-content:center;gap:calc(14*var(--t));font-size:calc(36*var(--t));font-weight:1000;font-variant-numeric:tabular-nums}
+#timer svg{width:calc(34*var(--t));height:calc(34*var(--t))}#timer.low{background:var(--red);color:#fff}
+#stealth{left:50%;top:calc(96*var(--t));transform:translateX(-50%);padding:calc(4*var(--t)) calc(16*var(--t));border-radius:calc(20*var(--t));font-size:calc(15*var(--t));font-weight:1000;letter-spacing:calc(1.5*var(--t));display:flex;gap:calc(8*var(--t));align-items:center;border-width:calc(3*var(--t));box-shadow:calc(4*var(--t)) calc(4*var(--t)) 0 var(--ink)}
 #stealth svg{width:calc(20*var(--t));height:calc(14*var(--t))}
-#stealth.KELIHATAN{background:#f6d6cc;border-color:var(--red);color:var(--red)}#stealth.TERSOROK{background:#d8ecd9}#stealth.CURIGA{background:#fbe3a6;border-color:#b8811c;color:#7a5410}
-#map{right:calc(69*var(--t));top:calc(22*var(--t));width:calc(225*var(--t));height:calc(225*var(--t));border-radius:50%;border:calc(5*var(--t)) solid var(--green);box-shadow:0 0 0 calc(3*var(--t)) var(--cream),0 calc(5*var(--t)) 0 calc(3*var(--t)) #1d3a3233;overflow:hidden;background:#cfd2c2}
+#stealth.KELIHATAN{background:var(--red);color:#fff}#stealth.SEPARA{background:var(--yellow)}#stealth.TERSOROK{background:var(--mint)}#stealth.CURIGA{background:var(--orange)}
+#map{right:calc(69*var(--t));top:calc(22*var(--t));width:calc(225*var(--t));height:calc(225*var(--t));border-radius:50%;border:var(--bw) solid var(--ink);box-shadow:var(--sh) var(--sh) 0 var(--ink);overflow:hidden;background:#cfd2c2}
 #map canvas{width:100%;height:100%;display:block}
-#north{right:calc(166*var(--t));top:calc(12*var(--t));width:calc(32*var(--t));height:calc(32*var(--t));border-radius:50%;background:var(--green);color:#fff;font-size:calc(17*var(--t));display:grid;place-items:center;font-weight:900;z-index:3}
-#pause{position:fixed;z-index:3;right:calc(19*var(--t));top:calc(22*var(--t));width:calc(50*var(--t));height:calc(50*var(--t));min-width:40px;min-height:40px;padding:0;display:grid;place-items:center;cursor:pointer;border-radius:calc(12*var(--t))}
-#pause i{display:flex;gap:calc(6*var(--t))}#pause i::before,#pause i::after{content:"";width:calc(8*var(--t));min-width:6px;height:calc(24*var(--t));min-height:18px;background:var(--ink);border-radius:2px}
+#north{right:calc(162*var(--t));top:calc(8*var(--t));width:calc(38*var(--t));height:calc(38*var(--t));border-radius:50%;background:var(--yellow);border:calc(3*var(--t)) solid var(--ink);font-size:calc(17*var(--t));display:grid;place-items:center;font-weight:1000;z-index:3}
+#pause{position:fixed;z-index:3;right:calc(19*var(--t));top:calc(22*var(--t));width:calc(54*var(--t));height:calc(54*var(--t));min-width:40px;min-height:40px;padding:0;display:grid;place-items:center;cursor:pointer;border-radius:calc(14*var(--t))}
+#pause i{display:flex;gap:calc(6*var(--t))}#pause i::before,#pause i::after{content:"";width:calc(8*var(--t));min-width:6px;height:calc(24*var(--t));min-height:18px;background:var(--ink);border-radius:3px}
+#pause:active{transform:translate(var(--sh),var(--sh));box-shadow:none}
 #crosshair{left:50%;top:50%;width:0;height:0}
-#crosshair i{position:absolute;background:#fff;box-shadow:0 0 0 1px #1d3a3260;border-radius:1px}
-#hitmark{left:50%;top:50%;width:0;height:0;opacity:0;transition:opacity .2s}#hitmark::before,#hitmark::after{content:"";position:absolute;left:-15px;top:-1.5px;width:30px;height:3px;background:var(--red);border-radius:2px;transform:rotate(45deg)}#hitmark::after{transform:rotate(-45deg)}
-#toast{top:28%;left:50%;transform:translateX(-50%);padding:calc(8*var(--t)) calc(26*var(--t));border-radius:calc(30*var(--t));font-size:max(13px,calc(24*var(--t)));opacity:0;transition:opacity .25s;white-space:nowrap}#toast.show{opacity:1}
-#ammo{right:calc(27*var(--t));bottom:calc(15*var(--t));width:calc(195*var(--t));height:calc(86*var(--t));display:flex;align-items:center;justify-content:center;gap:calc(18*var(--t));font-size:calc(36*var(--t));font-variant-numeric:tabular-nums}
-#ammo svg{width:calc(42*var(--t));height:calc(40*var(--t))}#ammo small{font-size:calc(27*var(--t));margin-left:calc(-8*var(--t))}#ammo.empty b{color:var(--red)}
-/* A button's right/bottom is its centre's distance from the corner. */
-.btn{position:fixed;z-index:3;border-radius:50%;background:var(--cream);border:calc(4*var(--t)) solid var(--green);box-shadow:0 0 0 calc(5*var(--t)) var(--gold) inset,0 0 0 calc(3*var(--t)) var(--cream),0 calc(6*var(--t)) 0 calc(3*var(--t)) #1d3a3240;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(6*var(--t));font-family:inherit;font-weight:900;color:var(--ink);touch-action:none;padding:0;cursor:pointer;transform:translate(50%,50%)}
-.btn svg{width:42%;height:42%}.btn span{line-height:1}
-.btn.on{background:#f6dea0}.btn.down{transform:translate(50%,50%) scale(.94)}.btn.busy{opacity:.75}
-#aim{right:calc(94*var(--t));bottom:calc(496*var(--t));width:calc(115*var(--t));height:calc(115*var(--t));font-size:calc(18*var(--t))}
-#fire{right:calc(134*var(--t));bottom:calc(331*var(--t));width:calc(170*var(--t));height:calc(170*var(--t));font-size:calc(27*var(--t))}
-#reload{right:calc(94*var(--t));bottom:calc(179*var(--t));width:calc(115*var(--t));height:calc(115*var(--t));font-size:calc(16*var(--t))}
-#reload svg{width:34%;height:34%}#reload::after{content:"";width:0;height:0;border:calc(6*var(--t)) solid transparent;border-top-color:var(--ink);margin-top:calc(-2*var(--t))}
-#crouch{right:calc(300*var(--t));bottom:calc(200*var(--t));width:calc(104*var(--t));height:calc(104*var(--t));font-size:calc(16*var(--t))}
-#fire .ring{position:absolute;inset:calc(-9*var(--t));border-radius:50%;border:calc(5*var(--t)) solid transparent;pointer-events:none}
-#joystick{position:fixed;z-index:3;left:calc(158*var(--t));bottom:calc(171*var(--t));transform:translate(-50%,50%);width:calc(225*var(--t));height:calc(225*var(--t));border-radius:50%;background:#faf3dfb8;border:calc(4*var(--t)) solid #faf3df;box-shadow:0 calc(5*var(--t)) 0 #1d3a3230;touch-action:none;display:grid;place-items:center}
+#crosshair i{position:absolute;background:#fff;box-shadow:0 0 0 1.5px var(--ink);border-radius:2px}
+#hitmark{left:50%;top:50%;width:0;height:0;opacity:0;transition:opacity .2s}#hitmark::before,#hitmark::after{content:"";position:absolute;left:-16px;top:-2.5px;width:32px;height:5px;background:var(--red);border:1.5px solid var(--ink);border-radius:3px;transform:rotate(45deg)}#hitmark::after{transform:rotate(-45deg)}
+#toast{top:28%;left:50%;transform:translateX(-50%) rotate(-1.5deg);padding:calc(8*var(--t)) calc(26*var(--t));border-radius:calc(30*var(--t));font-size:max(13px,calc(25*var(--t)));font-weight:1000;opacity:0;transition:opacity .25s;white-space:nowrap;background:var(--yellow)}#toast.show{opacity:1}
+#ammo{right:calc(27*var(--t));bottom:calc(15*var(--t));width:calc(250*var(--t));padding:calc(8*var(--t)) calc(16*var(--t)) calc(6*var(--t));display:flex;flex-direction:column;align-items:center;font-variant-numeric:tabular-nums}
+#weapon-name{font-size:calc(14*var(--t));font-weight:1000;letter-spacing:calc(2*var(--t));background:var(--ink);color:var(--paper);border-radius:calc(8*var(--t));padding:calc(2*var(--t)) calc(10*var(--t))}
+#ammo .row{display:flex;align-items:center;gap:calc(14*var(--t));font-size:calc(38*var(--t));font-weight:1000;line-height:1.15}
+#ammo svg{width:calc(70*var(--t));height:calc(28*var(--t))}#ammo small{font-size:calc(26*var(--t));margin-left:calc(-8*var(--t))}#ammo.empty b{color:var(--red)}
+#ammo .ic-sniper,#swap .ic-sniper{display:none}#ammo[data-weapon=sniper] .ic-sniper,#swap[data-next=sniper] .ic-sniper{display:block}#ammo[data-weapon=sniper] .ic-shotgun,#swap[data-next=sniper] .ic-shotgun{display:none}
+/* A button's right/bottom is its centre's distance from the corner. Pressing
+   pushes it into its shadow. */
+.btn{position:fixed;z-index:3;border-radius:50%;border:var(--bw) solid var(--ink);box-shadow:var(--sh) var(--sh) 0 var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(5*var(--t));font-family:inherit;font-weight:1000;color:var(--ink);touch-action:none;padding:0;cursor:pointer;transform:translate(50%,50%);transition:transform .05s,box-shadow .05s}
+.btn svg{width:40%;height:40%}.btn span{line-height:1}
+.btn.down,.btn:active{transform:translate(calc(50% + var(--sh)),calc(50% + var(--sh)));box-shadow:0 0 0 var(--ink)}
+.btn.on{box-shadow:inset 0 0 0 calc(5*var(--t)) var(--ink),var(--sh) var(--sh) 0 var(--ink)}.btn.busy{filter:saturate(.45) brightness(.95)}
+#aim{right:calc(94*var(--t));bottom:calc(496*var(--t));width:calc(115*var(--t));height:calc(115*var(--t));font-size:calc(18*var(--t));background:var(--blue)}
+#fire{right:calc(134*var(--t));bottom:calc(331*var(--t));width:calc(170*var(--t));height:calc(170*var(--t));font-size:calc(27*var(--t));background:var(--red)}
+#reload{right:calc(94*var(--t));bottom:calc(179*var(--t));width:calc(115*var(--t));height:calc(115*var(--t));font-size:calc(15*var(--t));background:var(--yellow)}
+#reload svg{width:34%;height:34%}
+#crouch{right:calc(300*var(--t));bottom:calc(200*var(--t));width:calc(104*var(--t));height:calc(104*var(--t));font-size:calc(16*var(--t));background:var(--mint)}
+#swap{right:calc(332*var(--t));bottom:calc(66*var(--t));width:calc(96*var(--t));height:calc(96*var(--t));font-size:calc(15*var(--t));background:var(--lilac)}
+#swap svg{width:70%;height:26%}
+#joystick{position:fixed;z-index:3;left:calc(158*var(--t));bottom:calc(171*var(--t));transform:translate(-50%,50%);width:calc(225*var(--t));height:calc(225*var(--t));border-radius:50%;background:#fffaf0cc;border:var(--bw) solid var(--ink);box-shadow:var(--sh) var(--sh) 0 var(--ink);touch-action:none;display:grid;place-items:center}
 #joystick .arrows{position:absolute;inset:0;pointer-events:none}
-#knob{width:45%;height:45%;border-radius:50%;background:var(--green);border:calc(5*var(--t)) solid var(--cream);box-shadow:0 0 0 calc(3*var(--t)) var(--green);pointer-events:none}
-.pill{left:50%;bottom:calc(24*var(--t));transform:translateX(-50%);height:max(26px,calc(40*var(--t)));padding:0 calc(26*var(--t));border-radius:calc(22*var(--t));display:flex;align-items:center;gap:calc(26*var(--t));font-size:max(11px,calc(19*var(--t)));font-weight:700;color:#fff;background:#1d3a32a8;border:calc(2*var(--t)) solid #faf3df90;white-space:nowrap}
-.overlay{position:fixed;inset:0;z-index:5;display:grid;place-items:center;background:#1d3a3270;padding:16px}
-.dialog{max-width:460px;width:100%;max-height:100%;overflow:auto;padding:22px 24px 18px;text-align:center;border-radius:18px;border-width:3px}
-.dialog h1{margin:0 0 4px;font-size:26px;font-weight:900}.dialog h2{margin:0 0 8px;color:#8a6a1e;font-size:13px;letter-spacing:3px}.dialog p{font-weight:600;line-height:1.4;margin:8px 0}
-.dialog ul{text-align:left;font-weight:600;padding-left:20px;margin:8px 0;line-height:1.45;font-size:14px}
-.dialog .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:14px}
-.dialog button,.dialog a{font:900 16px Nunito,system-ui;padding:11px 24px;border-radius:12px;border:3px solid var(--green);background:var(--gold);color:var(--ink);cursor:pointer;text-decoration:none}
-.dialog .ghost{background:var(--cream)}
-.stats{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:12px 0;font-size:14px}.stats div{background:#efe7cf;border-radius:8px;padding:6px}.stats b{display:block;font-size:22px}
+#knob{width:44%;height:44%;border-radius:50%;background:var(--yellow);border:var(--bw) solid var(--ink);box-shadow:calc(3*var(--t)) calc(3*var(--t)) 0 var(--ink);pointer-events:none}
+.pill{left:50%;bottom:calc(24*var(--t));transform:translateX(-50%);height:max(26px,calc(42*var(--t)));padding:0 calc(24*var(--t));border-radius:calc(22*var(--t));display:flex;align-items:center;gap:calc(22*var(--t));font-size:max(11px,calc(18*var(--t)));font-weight:900;color:var(--paper);background:var(--ink);white-space:nowrap}
+/* Barrett scope: the world through a round lens, mil-dot reticle. */
+#scope{position:fixed;inset:0;z-index:1;pointer-events:none;--lens:min(44vh,44vw);background:radial-gradient(circle at 50% 50%,transparent 0 var(--lens),var(--ink) calc(var(--lens) + 1px))}
+#scope::before{content:"";position:absolute;left:50%;top:50%;width:calc(var(--lens) * 2);height:calc(var(--lens) * 2);transform:translate(-50%,-50%);border-radius:50%;box-shadow:inset 0 0 0 6px var(--ink),inset 0 0 40px 12px #0008}
+#scope svg{position:absolute;left:50%;top:50%;width:calc(var(--lens) * 2);height:calc(var(--lens) * 2);transform:translate(-50%,-50%)}
+.overlay{position:fixed;inset:0;z-index:5;display:grid;place-items:center;background:#14141455;padding:16px}
+.dialog{max-width:470px;width:100%;max-height:100%;overflow:auto;padding:22px 24px 20px;text-align:center;border-width:4px;border-radius:24px;box-shadow:8px 8px 0 var(--ink)}
+.dialog h1{margin:6px 0 4px;font-size:30px;font-weight:1000;line-height:1.1}
+.dialog h2{display:inline-block;margin:0;font-size:12px;letter-spacing:2px;background:var(--yellow);border:3px solid var(--ink);border-radius:10px;padding:3px 10px}
+.dialog p{font-weight:700;line-height:1.4;margin:8px 0}
+.dialog ul{text-align:left;font-weight:700;padding-left:20px;margin:8px 0;line-height:1.45;font-size:14px}
+.dialog .row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:16px}
+.dialog button{font:1000 17px Nunito,system-ui;padding:12px 26px;border-radius:16px;border:3px solid var(--ink);background:var(--yellow);color:var(--ink);cursor:pointer;box-shadow:4px 4px 0 var(--ink);transition:transform .05s,box-shadow .05s}
+.dialog button:active{transform:translate(4px,4px);box-shadow:0 0 0 var(--ink)}
+.dialog .ghost{background:#fff}
+.weapons{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0 4px;text-align:left}
+.weapons div{border:3px solid var(--ink);border-radius:14px;padding:8px 10px;font-size:13px;font-weight:700;line-height:1.35}.weapons b{display:block;font-size:14px;font-weight:1000}
+.weapons div:first-child{background:var(--mint)}.weapons div:last-child{background:var(--lilac)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0;font-size:13px;font-weight:800}.stats div{border:3px solid var(--ink);border-radius:14px;padding:6px}.stats b{display:block;font-size:26px;font-weight:1000}
+.stats div:nth-child(1){background:var(--mint)}.stats div:nth-child(2){background:var(--blue)}.stats div:nth-child(3){background:var(--orange)}.stats div:nth-child(4){background:var(--yellow)}
 #rotate{display:none}
 [hidden]{display:none!important}
 .touch-only{display:none}
 @media (pointer:coarse){.touch-only{display:flex}#joystick.touch-only{display:grid}.desk{display:none!important}}
 @media (pointer:fine){.touch,.touch-only{display:none!important}}
 /* Short landscape phones: a smaller minimap keeps clear of the BIDIK button. */
-@media (max-height:520px){#map{width:calc(170*var(--t));height:calc(170*var(--t))}#north{right:calc(138*var(--t))}#aim{bottom:calc(470*var(--t))}}
+@media (max-height:520px){#map{width:calc(170*var(--t));height:calc(170*var(--t))}#north{right:calc(134*var(--t))}#aim{bottom:calc(470*var(--t))}}
 @media (pointer:coarse) and (orientation:portrait){#rotate{display:grid}}
 </style>
 <script type="importmap">{"imports":{"three":"./vendor/three.module.js","three/addons/":"./vendor/addons/"}}</script></head><body>
 <canvas id="world"></canvas>
-<div id="badge" class="hud"><svg viewBox="0 0 56 60" fill="#d6a83a"><path d="M28 2l3 6h-6zM23 9h10v9H23zM25.5 12h5v4h-5z" /><path d="M10 22h36l3 5H7zM12 28h4v20h-4zM20 28h4v20h-4zM32 28h4v20h-4zM40 28h4v20h-4zM6 50h44v4H6zM3 55h50v4H3z"/><path d="M26 30h4v18h-4z"/></svg><div><b>OPERASI GAGAK</b><small>MAJLIS BANDARAYA</small></div></div>
-<div id="mission" class="hud card"><b id="mission-id">MISI 01</b><div class="title" id="mission-title">Kawal kawasan pasar</div><div class="count"><svg viewBox="0 0 42 32" fill="#1d3a32"><path d="M1 21c7-1 12-6 17-8 3-5 9-7 13-5l9-1-7 5c1 6-4 11-12 12l-5 7h-3l3-7c-6 0-11-1-15-3z"/></svg><span id="count">0 / 30</span></div><div class="bar"><i id="progress"></i></div></div>
-<div id="timer" class="hud card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><circle cx="12" cy="13" r="9"/><path d="M12 8v5l3 2M9 2h6"/></svg><span id="clock">05:00</span></div>
-<div id="stealth" class="hud card KELIHATAN"><svg viewBox="0 0 24 16" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M1 8s4-7 11-7 11 7 11 7-4 7-11 7S1 8 1 8z"/><circle cx="12" cy="8" r="3"/></svg><span id="stealth-text">KELIHATAN</span></div>
+<div id="scope" hidden><svg viewBox="-100 -100 200 200" fill="none" stroke="#141414"><path d="M-100 0h88M12 0h88M0-100v88M0 12v88" stroke-width="1"/><path d="M-100 0h60M40 0h60M0 40v60" stroke-width="3.5"/><g fill="#141414" stroke="none"><circle cx="-10" r="1.2"/><circle cx="-20" r="1.2"/><circle cx="-30" r="1.2"/><circle cx="10" r="1.2"/><circle cx="20" r="1.2"/><circle cx="30" r="1.2"/><circle cy="10" r="1.2"/><circle cy="20" r="1.2"/><circle cy="30" r="1.2"/><circle cy="-10" r="1.2"/><circle cy="-20" r="1.2"/><circle cy="-30" r="1.2"/></g><circle r="1" fill="#ff5c5c" stroke="none"/></svg></div>
+<div id="badge" class="hud card"><svg viewBox="0 0 56 60" fill="#141414"><path d="M28 2l3 6h-6zM23 9h10v9H23zM25.5 12h5v4h-5z" /><path d="M10 22h36l3 5H7zM12 28h4v20h-4zM20 28h4v20h-4zM32 28h4v20h-4zM40 28h4v20h-4zM6 50h44v4H6zM3 55h50v4H3z"/><path d="M26 30h4v18h-4z"/></svg><div><b>OPERASI GAGAK</b><small>MAJLIS BANDARAYA</small></div></div>
+<div id="mission" class="hud card"><b id="mission-id">MISI 01</b><div class="title" id="mission-title">Kawal kawasan pasar</div><div class="count"><svg viewBox="0 0 42 32" fill="#141414"><path d="M1 21c7-1 12-6 17-8 3-5 9-7 13-5l9-1-7 5c1 6-4 11-12 12l-5 7h-3l3-7c-6 0-11-1-15-3z"/></svg><span id="count">0 / 30</span></div><div class="bar"><i id="progress"></i></div></div>
+<div id="timer" class="hud card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"><circle cx="12" cy="13" r="9"/><path d="M12 8v5l3 2M9 2h6"/></svg><span id="clock">02:00</span></div>
+<div id="stealth" class="hud card KELIHATAN"><svg viewBox="0 0 24 16" fill="none" stroke="currentColor" stroke-width="2.8"><path d="M1 8s4-7 11-7 11 7 11 7-4 7-11 7S1 8 1 8z"/><circle cx="12" cy="8" r="3"/></svg><span id="stealth-text">KELIHATAN</span></div>
 <div id="map" class="hud"><canvas id="minimap" width="300" height="300"></canvas></div><div id="north" class="hud">N</div>
 <button id="pause" class="card" aria-label="Jeda"><i></i></button>
 <div id="crosshair" class="hud"><i id="ch-l"></i><i id="ch-r"></i><i id="ch-t"></i><i id="ch-b"></i></div>
 <div id="hitmark" class="hud"></div>
 <div id="toast" class="hud card"></div>
-<div id="ammo" class="hud card"><svg viewBox="0 0 42 40" fill="#1d3a32"><path d="M4 14q4-10 8 0v24H4zM17 14q4-10 8 0v24h-8zM30 14q4-10 8 0v24h-8z"/></svg><b id="mag">06</b><small id="reserve">/ 42</small></div>
+<div id="ammo" class="hud card" data-weapon="shotgun"><span id="weapon-name">SENAPANG PATAH</span><div class="row">
+  <svg class="ic-shotgun" viewBox="0 0 70 28" fill="#141414"><path d="M2 10h44l2-3h20v6H52l-3 3h-9v4l-5 1-1-4H24l-8 10H6l4-10H2z"/></svg>
+  <svg class="ic-sniper" viewBox="0 0 70 28" fill="#141414"><path d="M22 2h22v3h-4v2h-6V5h-8l-2 2h-3V4zM1 11h8l3-2h44V8h13v5H56v2H40l-2 6h-5l1-6h-8l-6 11H8l5-11H1z"/></svg>
+  <b id="mag">08</b><small id="reserve">/ 96</small></div></div>
 <div id="hint" class="hud pill touch"><span>‹</span>Leret untuk pandang<span>›</span></div>
-<div id="hint2" class="hud pill desk">Klik untuk mula · WASD · Klik kiri tembak · Klik kanan bidik · R isi · C sorok</div>
-<div id="joystick" class="touch-only" aria-label="Joystick pergerakan"><svg class="arrows" viewBox="0 0 100 100" fill="#1d3a32"><path d="M50 8l6 7H44zM50 92l6-7H44zM8 50l7-6v12zM92 50l-7-6v12z"/></svg><div id="knob"></div></div>
-<button id="aim" class="btn touch-only"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="1" fill="currentColor"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/></svg><span>BIDIK</span></button>
-<button id="fire" class="btn touch-only"><i class="ring" id="fire-ring"></i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><path d="M12 1.5v5M12 17.5v5M1.5 12h5M17.5 12h5"/></svg><span>TEMBAK</span></button>
+<div id="hint2" class="hud pill desk">Klik untuk mula · WASD · Klik kiri tembak · Klik kanan bidik · R isi · C sorok · Q tukar senjata</div>
+<div id="joystick" class="touch-only" aria-label="Joystick pergerakan"><svg class="arrows" viewBox="0 0 100 100" fill="#141414"><path d="M50 8l6 7H44zM50 92l6-7H44zM8 50l7-6v12zM92 50l-7-6v12z"/></svg><div id="knob"></div></div>
+<button id="aim" class="btn touch-only"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="1" fill="currentColor"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/></svg><span>BIDIK</span></button>
+<button id="fire" class="btn touch-only"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><path d="M12 1.5v5M12 17.5v5M1.5 12h5M17.5 12h5"/></svg><span>TEMBAK</span></button>
 <button id="reload" class="btn touch-only"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 7q2-5 4 0v15H4zM10 7q2-5 4 0v15h-4zM16 7q2-5 4 0v15h-4z"/></svg><span>ISI SEMULA</span></button>
 <button id="crouch" class="btn touch-only"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="13" cy="4.5" r="2.8"/><path d="M9 9h7l1.5 6H14l1 7h-3.5l-1-5.5L8 17l-2-2 3-3z"/></svg><span>SOROK</span></button>
+<button id="swap" class="btn touch-only" data-next="sniper" aria-label="Tukar senjata">
+  <svg class="ic-shotgun" viewBox="0 0 70 28" fill="#141414"><path d="M2 10h44l2-3h20v6H52l-3 3h-9v4l-5 1-1-4H24l-8 10H6l4-10H2z"/></svg>
+  <svg class="ic-sniper" viewBox="0 0 70 28" fill="#141414"><path d="M22 2h22v3h-4v2h-6V5h-8l-2 2h-3V4zM1 11h8l3-2h44V8h13v5H56v2H40l-2 6h-5l1-6h-8l-6 11H8l5-11H1z"/></svg><span>TUKAR</span></button>
 <div id="start" class="overlay"><div class="dialog card">
-  <h2>MAJLIS BANDARAYA · OPERASI GAGAK</h2><h1 id="start-title">MISI 01</h1>
+  <h2>MAJLIS BANDARAYA</h2><h1 id="start-title">MISI 01</h1>
   <p id="loading">Memuatkan bandar…</p>
-  <div id="brief" hidden><p>Gagak rumah memenuhi bumbung dan wayar di bandar. Tembak <b id="brief-target">30</b> ekor sebelum masa tamat.</p>
-  <ul><li><b>Sorok:</b> tunduk (SOROK) di sebelah dinding, kereta atau pokok. Gagak susah nampak anda.</li><li><b>Senyap:</b> senapang patah berpenyenyap. Hanya gagak dekat yang dengar tembakan.</li><li>Gagak yang nampak anda akan berbunyi dan terbang, bersama kawan-kawannya.</li><li>Tekan dan tahan <b>TEMBAK</b> untuk terus menembak. <b>Bidik</b> untuk tembakan lebih rapat.</li></ul>
-  <div class="row"><button id="go">MULA ▶</button><a class="ghost" href="editor/">Editor peta</a></div></div>
+  <div id="brief" hidden><p>Gagak rumah memenuhi bumbung dan wayar di bandar. Tembak <b id="brief-target">30</b> ekor dalam <b id="brief-time">2 minit</b>.</p>
+  <div class="weapons"><div><b>Senapang patah</b>Senyap, sebaran peluru luas. Terbaik untuk jarak dekat.</div><div><b>Barrett M82</b>Teropong, tembus 3 gagak sebaris. Kuat — gagak sekeliling terkejut.</div></div>
+  <ul><li><b>SOROK</b> di sebelah dinding, kereta atau pokok supaya gagak tidak nampak anda.</li><li>Tahan <b>TEMBAK</b> untuk terus menembak. <b>TUKAR</b> untuk tukar senjata.</li></ul>
+  <div class="row"><button id="go">MULA ▶</button></div></div>
 </div></div>
-<div id="paused" class="overlay" hidden><div class="dialog card"><h1>Jeda</h1><div class="row"><button id="resume">Sambung</button><button id="restart" class="ghost">Mula semula</button><a class="ghost" href="editor/">Editor peta</a></div></div></div>
+<div id="paused" class="overlay" hidden><div class="dialog card"><h1>Jeda</h1><div class="row"><button id="resume">Sambung</button><button id="restart" class="ghost">Mula semula</button></div></div></div>
 <div id="end" class="overlay" hidden><div class="dialog card"><h2 id="end-kicker">MISI 01</h2><h1 id="end-title">MISI BERJAYA</h1><p id="end-text"></p>
   <div class="stats"><div>Gagak ditembak<b id="s-kills">0</b></div><div>Ketepatan<b id="s-acc">0%</b></div><div>Gagak terlepas<b id="s-fled">0</b></div><div>Masa<b id="s-time">0:00</b></div></div>
-  <div class="row"><button id="again">Main lagi</button><a class="ghost" href="editor/">Editor peta</a></div></div></div>
+  <div class="row"><button id="again">Main lagi</button></div></div></div>
 <div id="rotate" class="overlay"><div class="dialog card"><h1>↻</h1><p>Pusingkan telefon ke mod melintang untuk bermain.</p></div></div>
-<script type="module" src="src/game.js?v=0.3.0"></script>
+<script type="module" src="src/game.js?v=0.4.0"></script>
 </body></html>

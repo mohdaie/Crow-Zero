@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {SHOTGUN,CROW_RADIUS,pelletOffsets,raySphere,pelletsKill,noticeRate,coverNear,stealthLabel,missionState,MISSION,clock} from '../src/hunt-rules.js';
+import {SHOTGUN,SNIPER,bulletPath,CROW_RADIUS,pelletOffsets,raySphere,pelletsKill,noticeRate,coverNear,stealthLabel,missionState,MISSION,clock} from '../src/hunt-rules.js';
 import {planProblems} from '../src/town-layout.js';
 import {CITY_PLAN} from '../src/city-plan.js';
 import {derive} from '../src/town-layout.js';
@@ -45,4 +45,12 @@ test('mission ends on target, time or ammo, and the clock formats',()=>{
   assert.equal(missionState({kills:1,timeLeft:10,shells:0}),'ammo');
   assert.equal(missionState({kills:1,timeLeft:10,shells:3}),'playing');
   assert.equal(clock(300),'05:00');assert.equal(clock(61.2),'01:02');assert.equal(clock(-3),'00:00');
+});
+test('sniper bullet passes through crows in a line, stops at walls and range',()=>{
+  const hits=[[40,'b'],[12,'a'],[90,'c'],[150,'d']];
+  assert.deepEqual(bulletPath(hits),['a','b','c']);
+  assert.deepEqual(bulletPath(hits,50),['a','b']);
+  assert.deepEqual(bulletPath([[SNIPER.range+1,'far']]),[]);
+  assert.ok(SNIPER.noiseRadius>SHOTGUN.noiseRadius,'the Barrett is louder than the suppressed shotgun');
+  assert.equal(MISSION.seconds,120);
 });
