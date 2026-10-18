@@ -9,7 +9,7 @@ import { CROW_RADIUS, noticeRate } from './hunt-rules.js?v=0.2.0';
 // Perches, found once per map: ray-cast down onto every building, lamp and
 // pole the player collides with, every overhead wire, and open ground for
 // pecking. A perch may carry `yaw`, the way a crow there faces.
-export function findPerches({ colliders, solids, bounds, groundHeight, canStand, rand, wires = [] }) {
+export function findPerches({ colliders, solids, bounds, groundHeight, canStand, rand, wires = [], hotspots = [] }) {
   const ray = new T.Raycaster(), down = new T.Vector3(0, -1, 0), perches = [];
   const probe = (x, z, kind, yaw) => {
     ray.set(new T.Vector3(x, 90, z), down); ray.far = 100;
@@ -42,6 +42,8 @@ export function findPerches({ colliders, solids, bounds, groundHeight, canStand,
       perches.push({ x: p[0] + (q[0] - p[0]) * t, y: p[1] + (q[1] - p[1]) * t - sag * 4 * t * (1 - t), z: p[2] + (q[2] - p[2]) * t, kind: 'wire', yaw: across + (rand() < .5 ? 0 : Math.PI), taken: false });
     }
   }
+  // Rubbish areas: bin rims, bag piles and the ground in front of them.
+  for (const h of hotspots) perches.push({ x: h.x, y: h.y, z: h.z, kind: 'dump', yaw: rand() * Math.PI * 2, taken: false });
   const area = (bounds.maxX - bounds.minX) * (bounds.maxZ - bounds.minZ);
   for (let i = 0, made = 0; i < area / 60 && made < 40; i++) {
     const x = bounds.minX + rand() * (bounds.maxX - bounds.minX), z = bounds.minZ + rand() * (bounds.maxZ - bounds.minZ);
@@ -76,7 +78,9 @@ function crowModel(toon) {
   for (const m of [torso, skull, beak, tail]) outline(m, 1.3);
   // Drawn a little larger than life so a crow on a roof reads at range.
   body.scale.setScalar(1.6);
-  root.userData = { body, head, wings, legs };
+  // Fine detail (outline hulls, eyes) is only drawn near the player.
+  const detail = []; root.traverse(o => { if (o.userData.ink || o.material?.isMeshBasicMaterial) detail.push(o); });
+  root.userData = { body, head, wings, legs, detail };
   return root;
 }
 
@@ -90,7 +94,10 @@ export function createFlock({ scene, toon, perches, bounds, solids, groundHeight
   const freePerch = from => {
     const free = perches.filter(p => !p.taken && !p.cooldown);
     if (!free.length) return null;
-    // Prefer roofs and lamps; ground only now and then.
+    // Rubbish areas draw crows most; then roofs, wires and lamps; open ground
+    // only now and then.
+    const dump = free.filter(p => p.kind === 'dump');
+    if (dump.length && Math.random() < .5) return dump[Math.floor(Math.random() * dump.length)];
     const pool = free.filter(p => p.kind !== 'ground' || Math.random() < .3);
     const list = pool.length ? pool : free;
     return list[Math.floor(Math.random() * list.length)];
@@ -146,8 +153,10 @@ export function createFlock({ scene, toon, perches, bounds, solids, groundHeight
     const events = [];
     for (const p of perches) if (p.cooldown) p.cooldown = Math.max(0, p.cooldown - dt);
     for (const crow of [...crows]) {
-      const { body, head, wings, legs } = crow.model.userData;
+      const { body, head, wings, legs, detail } = crow.model.userData;
       const playerDist = Math.hypot(crow.pos.x - player.position.x, crow.pos.z - player.position.z, (crow.pos.y - player.position.y) * .5);
+      const near = playerDist < 35 || player.scoped;
+      if (crow.near !== near) { crow.near = near; for (const o of detail) o.visible = near; }
       let flapping = true;
       if (crow.state === 'arrive') {
         // Circle the target area a few times before dropping in.
@@ -206,7 +215,7 @@ export function createFlock({ scene, toon, perches, bounds, solids, groundHeight
       crow.flap += dt * (crow.state === 'flee' ? 22 : 15);
       const beat = flapping ? Math.sin(crow.flap) * .9 + .1 : crow.state === 'dead' ? .9 : -1.25;
       wings[0].rotation.z = -beat; wings[1].rotation.z = beat;
-      for (const leg of legs) leg.visible = !flapping && crow.state !== 'dead';
+      for (const leg of legs) leg.visible = near && !flapping && crow.state !== 'dead';
       crow.peck = Math.max(0, crow.peck - dt);
       head.rotation.x = crow.peck > 0 ? Math.sin((.5 - crow.peck) * Math.PI * 4) * .5 + .4 : crow.state === 'perch' && crow.aware > .45 ? -.25 : Math.sin(time * 2 + crow.flap) * .05;
     }

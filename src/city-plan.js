@@ -23,6 +23,8 @@ export const CITY_PLAN = {
     office('flat-3', 59, -31, 12, 12, 4, '#e8dbb8', 2),
     { id: 'pasar', kind: 'market', x: -50, z: 18, rot: 2 },
     { id: 'dataran', kind: 'square', x: -22, z: 16, rot: 0 },
+    { id: 'sampah-pasar', kind: 'dump', x: -50, z: 31, rot: 0 },
+    { id: 'sampah-selatan', kind: 'dump', x: 25, z: 64.5, rot: 2 },
     { id: 'hentian', kind: 'busstop', x: 20, z: 10, rot: 2 },
     { id: 'petrol', kind: 'petrol', x: 45, z: 14, rot: 2 },
     office('blok-a', 20, 36, 16, 12, 4, '#f0d18d', 2, 'Hotel'),
