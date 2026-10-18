@@ -171,7 +171,7 @@ svg text{font-family:var(--body);pointer-events:none}
 // ---------------------------------------------------------------- state
 // On the game's own site the preview opens next door; elsewhere (a Claude artifact) the published game.
 const GAME_URL = new URL('../preview.html', location.href).href;
-const PLAY_URL = new URL('../game.html', location.href).href;
+const PLAY_URL = new URL('../', location.href).href;
 const BASE = JSON.stringify(TOWN_PLAN);
 let SNAP = .5, gridStep = 10, showGrid = true, tab = 'edit';
 try { ({ snap: SNAP = .5, grid: gridStep = 10, show: showGrid = true } = JSON.parse(localStorage.getItem('crow-zero-view-v1') || '{}')); } catch { /* storage unavailable */ }

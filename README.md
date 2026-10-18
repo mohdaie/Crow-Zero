@@ -6,7 +6,7 @@ Scenery and the map editor were copied from **RetroMalaysia**, then adapted so y
 
 ## Build your city
 
-Open `tools/map-editor.html` (the home page opens it automatically).
+Open `/editor/` (`editor/index.html`). The home page is the game.
 
 1. Start on a blank 200 × 200 m map. Use **+ Jalan asfalt** to add a road. Drag it, rotate it, set its length/width and choose asphalt or dirt.
 2. Open **+ Aset**. Add houses, seven-shop terraces, school, mosque, petrol station, market, bus shelters, court, square, cars, bus and all other original building types. Buildings can be duplicated and deleted independently of RPG quests.
@@ -23,7 +23,7 @@ The 3D preview checks the map first: fix red layout errors before opening it. It
 
 ## Play: Operasi Gagak (MISI 01)
 
-Open `game.html`, or **Main: Operasi Gagak ▶** in the editor (also **Main ▶** in the walking preview). The game plays your editor map; with no buildings saved it uses the built-in small city in `src/city-plan.js` (shophouses, office and flat blocks, a market, a mosque, a bus stop and a petrol station on two avenues).
+Open the home page (`/`, `index.html`), or **Main: Operasi Gagak ▶** in the editor (also **Main ▶** in the walking preview). Published at https://mohdaie.github.io/Crow-Zero/ with the editor at https://mohdaie.github.io/Crow-Zero/editor/. Old `game.html` and `tools/map-editor.html` links redirect there. The game plays your editor map; with no buildings saved it uses the built-in small city in `src/city-plan.js` (shophouses, office and flat blocks, a market, a mosque, a bus stop and a petrol station on two avenues).
 
 Shoot **20 crows in 5 minutes** with a suppressed pump shotgun.
 
@@ -52,6 +52,6 @@ No dependency install or runtime CDN is required; Three.js and its loaders are v
 
 ## Source
 
-`src/world.js` retains RetroMalaysia's building mesh factories, road details, props, vehicles and batching. `src/trees.js` and `src/illustration.js` supply the original vegetation and comic appearance. `src/town-layout.js` is the shared geometry/validation used by the editor and preview. The generated `tools/map-editor.html` is rebuilt from `tools/map-editor.src.html`.
+`src/world.js` retains RetroMalaysia's building mesh factories, road details, props, vehicles and batching. `src/trees.js` and `src/illustration.js` supply the original vegetation and comic appearance. `src/town-layout.js` is the shared geometry/validation used by the editor and preview. The generated `editor/index.html` is rebuilt from `tools/map-editor.src.html`.
 
 Asset provenance and source revision: [docs/ASSET-ORIGIN.md](docs/ASSET-ORIGIN.md). The original town positions are also preserved in `src/retro-plan.js` for reference; new maps start blank.

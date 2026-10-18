@@ -7,7 +7,9 @@ const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/cs
 http.createServer(async (req, res) => {
   try {
     let path = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
-    if (path === '/') path = '/index.html';
+    // Folders serve their index.html; /editor redirects to /editor/ as on GitHub Pages.
+    if (path.endsWith('/')) path += 'index.html';
+    else if (!extname(path)) { res.writeHead(301, { Location: path + '/' }).end(); return; }
     const file = resolve(root, `.${path}`);
     if (!file.startsWith(root + sep)) { res.writeHead(403).end(); return; }
     const data = await readFile(file);
