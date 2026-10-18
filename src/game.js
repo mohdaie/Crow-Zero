@@ -1,9 +1,47 @@
 import * as T from 'three';
 import { safeSpawn, movePlayer, canStand } from './walk.js?v=0.1.0';
 import { CITY_PLAN } from './city-plan.js?v=0.2.0';
-import { SHOTGUN, SNIPER, bulletPath, bearing, crowCallout, MISSION, pelletOffsets, raySphere, pelletsKill, coverNear, stealthLabel, missionState, clock } from './hunt-rules.js?v=0.5.0';
-import { startAudio, sfx } from './sfx.js?v=0.5.0';
+import { VERSION, DIFFICULTY, crowsWanted, SHOTGUN, SNIPER, bulletPath, bearing, crowCallout, MISSION, pelletOffsets, raySphere, pelletsKill, coverNear, stealthLabel, missionState, clock } from './hunt-rules.js?v=0.6.0';
+import { startAudio, setVolume, sfx } from './sfx.js?v=0.6.0';
 const $ = id => document.getElementById(id), canvas = $('world');
+
+// ------------------------------------------------------------ title & options
+// Settings live on this device: volume (0…1) and difficulty.
+const SETTINGS_KEY = 'crow-zero-settings-v1';
+const settings = { volume: .8, difficulty: 'biasa' };
+try { Object.assign(settings, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')); } catch { }
+if (!DIFFICULTY[settings.difficulty]) settings.difficulty = 'biasa';
+const saveSettings = () => { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch { } };
+setVolume(settings.volume);
+$('version').textContent = 'v' + VERSION;
+const levelButtons = $('levels');
+for (const [id, level] of Object.entries(DIFFICULTY)) {
+  const b = document.createElement('button'); b.dataset.level = id; b.innerHTML = `<b>${level.label}</b><small>${level.note}</small>`;
+  b.onclick = () => { if (b.disabled) return; settings.difficulty = id; saveSettings(); showSettings(); };
+  levelButtons.append(b);
+}
+function showSettings() {
+  $('volume').value = Math.round(settings.volume * 100); $('volume-value').textContent = Math.round(settings.volume * 100) + '%';
+  for (const b of levelButtons.children) b.classList.toggle('on', b.dataset.level === settings.difficulty);
+  $('title-level').textContent = DIFFICULTY[settings.difficulty].label;
+}
+showSettings();
+$('volume').oninput = () => { settings.volume = $('volume').value / 100; setVolume(settings.volume); saveSettings(); showSettings(); };
+$('volume-test').onclick = () => { startAudio(); setVolume(settings.volume); sfx.shot(); sfx.ping(); };
+$('options-open').onclick = () => { $('options').hidden = false; };
+$('options-close').onclick = () => { $('options').hidden = true; };
+// Install: Chrome/Android offer a prompt (caught early in index.html); iOS
+// Safari installs from the Share menu, so it gets a hint instead.
+const standalone = matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches || navigator.standalone;
+const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const showInstall = () => { $('install').hidden = standalone || !(globalThis.installPrompt || ios); };
+addEventListener('installprompt-ready', showInstall); showInstall();
+$('install').onclick = async () => {
+  const prompt = globalThis.installPrompt;
+  if (prompt) { prompt.prompt(); await prompt.userChoice.catch(() => { }); globalThis.installPrompt = null; showInstall(); }
+  else $('install-hint').hidden = false;
+};
+if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(error => console.warn('Offline cache unavailable', error));
 const encode = plan => btoa(Array.from(new TextEncoder().encode(JSON.stringify(plan)), c => String.fromCharCode(c)).join('')).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
 try {
@@ -21,7 +59,7 @@ try {
   if (!planFromHash(location.hash)) throw Error('Peta tidak sah. Betulkan masalah layout di editor.');
   const { makeWorld } = await import('./world.js?v=0.3.0');
   const { toon } = await import('./illustration.js?v=0.1.0');
-  const { findPerches, createFlock } = await import('./crows.js?v=0.5.0');
+  const { findPerches, createFlock } = await import('./crows.js?v=0.6.0');
   const { createShotgun } = await import('./shotgun.js?v=0.4.0');
   const { createSniper } = await import('./sniper.js?v=0.4.0');
   const world = await makeWorld(canvas), { camera, renderer, scene, bounds, colliders } = world;
@@ -33,6 +71,7 @@ try {
   scene.traverse(o => { if (o.isMesh && !o.isInstancedMesh && o.castShadow && o.material?.type !== 'ShaderMaterial') solids.push(o); });
   const perches = findPerches({ colliders, solids, bounds, groundHeight: world.groundHeight, canStand, rand: Math.random, wires: world.wires });
   const flock = createFlock({ scene, toon, perches, bounds, solids, groundHeight: world.groundHeight });
+  let level = DIFFICULTY[settings.difficulty];
   // Two weapons, each with its own model, rules and ammunition. `cycle` is
   // the pump (shotgun) or the recoil recovery (Barrett) between shots.
   const weapons = [
@@ -53,7 +92,7 @@ try {
   const ray = new T.Raycaster();
 
   // ---------------------------------------------------------------- HUD
-  $('mission-id').textContent = MISSION.id; $('mission-title').textContent = MISSION.title; $('brief-target').textContent = MISSION.target; $('brief-time').textContent = MISSION.seconds % 60 ? clock(MISSION.seconds) : MISSION.seconds / 60 + ' minit'; $('start-title').textContent = MISSION.id + ' · ' + MISSION.title;
+  $('mission-id').textContent = MISSION.id; $('mission-title').textContent = MISSION.title; $('brief-target').textContent = MISSION.target; $('brief-time').textContent = MISSION.seconds % 60 ? clock(MISSION.seconds) : MISSION.seconds / 60 + ' minit'; $('start-title').textContent = MISSION.title;
   function hudAmmo() {
     $('mag').textContent = String(w.mag).padStart(2, '0'); $('reserve').textContent = '/ ' + w.reserve; $('ammo').classList.toggle('empty', w.mag === 0);
     $('ammo').dataset.weapon = w.id; $('weapon-name').textContent = w.name;
@@ -236,18 +275,29 @@ try {
   $('crouch').addEventListener('pointerdown', e => { e.preventDefault(); toggleCrouch(); });
   $('swap').addEventListener('pointerdown', e => { e.preventDefault(); switchWeapon(); });
 
+  const lockLevels = on => { for (const b of levelButtons.children) b.disabled = on; $('level-note').hidden = !on; };
   function setPaused(on) {
-    if (on && state === 'playing') { state = 'paused'; $('paused').hidden = false; keys.clear(); triggerHeld = false; if (document.pointerLockElement) document.exitPointerLock(); }
-    else if (!on && state === 'paused') { state = 'playing'; $('paused').hidden = true; last = performance.now(); if (fine) canvas.requestPointerLock?.()?.catch?.(() => { }); }
+    if (on && state === 'playing') { state = 'paused'; lockLevels(true); $('paused').hidden = false; keys.clear(); triggerHeld = false; if (document.pointerLockElement) document.exitPointerLock(); }
+    else if (!on && state === 'paused') { state = 'playing'; $('paused').hidden = true; $('options').hidden = true; last = performance.now(); if (fine) canvas.requestPointerLock?.()?.catch?.(() => { }); }
   }
   $('pause').onclick = () => setPaused(state === 'playing');
   $('resume').onclick = () => setPaused(false);
   $('restart').onclick = $('again').onclick = () => location.reload();
-  // Crows are scarce: a few on roofs and wires at the start, alone or in small groups.
-  for (let i = 0; i < 40 && flock.crows.length < 8; i++) flock.spawnGroup(1 + Math.floor(Math.random() * 3), true);
-  $('go').onclick = () => { startAudio(); $('start').hidden = true; state = 'playing'; last = performance.now(); if (fine) canvas.requestPointerLock?.()?.catch?.(() => { }); toast('Cari gagak · sorok dan tembak', 2.5); };
+  const groupSize = () => level.group[0] + Math.floor(Math.random() * (level.group[1] - level.group[0] + 1));
+  $('go').onclick = () => {
+    startAudio(); setVolume(settings.volume);
+    // The difficulty sets the crows: how many sit in town at the start, and how long each stays.
+    level = DIFFICULTY[settings.difficulty]; flock.settings.stay = level.stay;
+    for (let i = 0; i < 60 && flock.crows.length < level.start; i++) flock.spawnGroup(Math.min(groupSize(), level.start - flock.crows.length), true);
+    $('title').hidden = true; $('options').hidden = true; state = 'playing'; last = performance.now();
+    // Phones: full screen, locked sideways, where the browser allows it.
+    if (!fine && !standalone) document.documentElement.requestFullscreen?.({ navigationUI: 'hide' }).then(() => screen.orientation?.lock?.('landscape')).catch(() => { });
+    if (fine) canvas.requestPointerLock?.()?.catch?.(() => { });
+    toast(`${level.label} · cari gagak, sorok dan tembak`, 2.5);
+  };
+  $('pause-options').onclick = () => { $('options').hidden = false; };
   $('swap').dataset.next = 'sniper';
-  $('loading').hidden = true; $('brief').hidden = false;
+  $('loading').hidden = true; $('go').disabled = false;
 
   function finish(result) {
     state = 'over'; if (document.pointerLockElement) document.exitPointerLock();
@@ -303,9 +353,9 @@ try {
       queuedShot = Math.max(0, queuedShot - dt);
       if ((triggerHeld || queuedShot > 0) && pump < 0 && fire()) queuedShot = 0;
       // Scarce crows: a few at a time fly in to replace the ones shot or gone.
-      const around = flock.crows.filter(c => c.alive && c.state !== 'flee').length, want = Math.min(12, 7 + Math.floor(kills / 6));
+      const around = flock.crows.filter(c => c.alive && c.state !== 'flee').length, want = crowsWanted(level, kills);
       spawnTimer -= dt;
-      if (around < want && spawnTimer <= 0) { flock.spawnGroup(Math.min(want - around, 1 + Math.floor(Math.random() * 3))); spawnTimer = 3.5 + Math.random() * 3; }
+      if (around < want && spawnTimer <= 0) { flock.spawnGroup(Math.min(want - around, groupSize())); spawnTimer = 3.5 + Math.random() * 3; }
       calloutTimer -= dt; if (calloutTimer <= 0) { callout(); calloutTimer = 5 + Math.random() * 2; }
     }
     eye = T.MathUtils.damp(eye, crouched ? 1.05 : 1.65, 10, dt);

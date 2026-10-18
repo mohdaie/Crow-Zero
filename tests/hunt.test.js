@@ -1,6 +1,7 @@
 import test from 'node:test';
+import {readFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
-import {SHOTGUN,SNIPER,bulletPath,bearing,crowCallout,CROW_RADIUS,pelletOffsets,raySphere,pelletsKill,noticeRate,coverNear,stealthLabel,missionState,MISSION,clock} from '../src/hunt-rules.js';
+import {VERSION,DIFFICULTY,crowsWanted,SHOTGUN,SNIPER,bulletPath,bearing,crowCallout,CROW_RADIUS,pelletOffsets,raySphere,pelletsKill,noticeRate,coverNear,stealthLabel,missionState,MISSION,clock} from '../src/hunt-rules.js';
 import {planProblems} from '../src/town-layout.js';
 import {CITY_PLAN} from '../src/city-plan.js';
 import {derive} from '../src/town-layout.js';
@@ -65,4 +66,12 @@ test('callouts name the busiest direction relative to where the player faces',()
   // Turning 90° right puts a crow that was ahead on the left.
   assert.equal(bearing({x:0,z:0,yaw:-Math.PI/2},{x:0,z:-20}).side,'kiri');
   assert.equal(crowCallout(me,[{x:0,z:-500}]),null);
+});
+test('difficulty sets how many crows there are, and the version matches package.json',()=>{
+  const {mudah,biasa,sukar}=DIFFICULTY;
+  assert.ok(mudah.start>biasa.start&&biasa.start>sukar.start);
+  assert.ok(crowsWanted(mudah,0)>crowsWanted(biasa,0)&&crowsWanted(biasa,0)>crowsWanted(sukar,0));
+  assert.equal(crowsWanted(biasa,600),biasa.max);
+  assert.ok(sukar.stay[1]<biasa.stay[1]);
+  assert.equal(VERSION,JSON.parse(readFileSync(new URL('../package.json',import.meta.url))).version);
 });

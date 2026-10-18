@@ -5,11 +5,13 @@ export function startAudio() {
   if (ctx) { ctx.resume?.(); return; }
   const Ctx = globalThis.AudioContext || globalThis.webkitAudioContext;
   if (!Ctx) return;
-  ctx = new Ctx(); master = ctx.createGain(); master.gain.value = .7; master.connect(ctx.destination);
+  ctx = new Ctx(); master = ctx.createGain(); master.gain.value = level; master.connect(ctx.destination);
   noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
   const data = noise.getChannelData(0); for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
 }
-export function muteAudio(muted) { if (master) master.gain.value = muted ? 0 : .7; }
+// Master volume 0…1, from the options; kept until the audio starts.
+let level = .7;
+export function setVolume(v) { level = Math.max(0, Math.min(1, v)); if (master) master.gain.value = level; }
 
 function out(volume = 1, pan = 0) {
   const gain = ctx.createGain(); gain.gain.value = volume;

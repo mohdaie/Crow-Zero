@@ -23,6 +23,10 @@ The 3D preview checks the map first: fix red layout errors before opening it. It
 
 ## Play: Operasi Gagak (MISI 01)
 
+**Title screen and options.** The game opens on a title screen (key art, mission brief, version) with **MULA**, **PILIHAN** and, where the device can install it, **PASANG APP**. Options hold the volume (with a test sound) and the difficulty, which sets how many crows there are: **MUDAH** 12–18 crows staying longer, **BIASA** 7–12, **SUKAR** 4–7 that leave quickly. Settings are saved on the device; difficulty can't change mid-mission.
+
+**Installable app (PWA).** `manifest.webmanifest` (fullscreen, landscape, icons) and a service worker (`sw.js`) make it installable: Android/Chrome shows **PASANG APP**; on iPhone use Safari's Share → Add to Home Screen. After the first visit it plays offline. `npm run build` writes `dist/sw.js` with the list of game files and a version hashed from them, so each deploy gets a fresh cache; unbuilt, the worker passes requests through. On phones in the browser, MULA also asks for full screen and a landscape lock where allowed.
+
 Open the home page (`/`, `index.html`), or **Main: Operasi Gagak ▶** in the editor (also **Main ▶** in the walking preview). Published at https://mohdaie.github.io/Crow-Zero/ with the editor at https://mohdaie.github.io/Crow-Zero/editor/. Old `game.html` and `tools/map-editor.html` links redirect there. The game plays your editor map; with no buildings saved it uses the built-in small city in `src/city-plan.js` (shophouses, office and flat blocks, a market, a mosque, a bus stop and a petrol station on two avenues).
 
 Shoot **20 crows in 2 minutes**. Two weapons: a suppressed pump shotgun and a Barrett M82 sniper rifle (switch with **TUKAR**, `Q`, `1`/`2` or the mouse wheel). Crows are scarce: about 8 at the start, alone or in twos and threes on roof edges and power lines, with 7–12 in town at a time. Each perched crow stays only 25–45 seconds, then flies off for good (counted as escaped).
