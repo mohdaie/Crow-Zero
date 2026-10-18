@@ -1,0 +1,13 @@
+{
+  "name": "crow-zero",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Crow-Zero city map authoring kit, using RetroMalaysia scenery.",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "editor": "node scripts/editor.mjs",
+    "build": "node scripts/build.mjs",
+    "test": "node --test tests/*.test.js"
+  }
+}
