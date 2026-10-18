@@ -1,0 +1,999 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>
+<title>Crow-Zero City Editor</title>
+<style>
+/* Layout: a site plan filling the screen, with a details rail (bottom sheet on phones). */
+:root{
+  --paper:#f9f4e5;--panel:#fffaf0;--ink:#243f37;--muted:#6f786c;--line:#d9d2bd;--green:#244e43;--gold:#c99c4e;
+  --lawn:#dfe5c6;--edge:#c9d1ad;--river:#82aaa2;--asphalt:#a7aca5;--dirt:#d3c398;--floor:#efe8d2;
+  --error:#b8433a;--warn:#b77b16;--ok:#3f7a55;--select:#1b2f29;
+  --display:Georgia,"Times New Roman",serif;--body:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#16241f;--panel:#1c2d27;--ink:#ece4cd;--muted:#a9b29f;--line:#33463e;--green:#8fc3a9;--gold:#d9b06a;
+  --lawn:#2b3b2e;--edge:#3d4f3b;--river:#3f6a66;--asphalt:#5e6560;--dirt:#77694a;--floor:#3a3a2c;
+  --error:#ef7d6f;--warn:#e7ad4e;--ok:#7fc99a;--select:#fff3d2;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#16241f;--panel:#1c2d27;--ink:#ece4cd;--muted:#a9b29f;--line:#33463e;--green:#8fc3a9;--gold:#d9b06a;
+  --lawn:#2b3b2e;--edge:#3d4f3b;--river:#3f6a66;--asphalt:#5e6560;--dirt:#77694a;--floor:#3a3a2c;
+  --error:#ef7d6f;--warn:#e7ad4e;--ok:#7fc99a;--select:#fff3d2;color-scheme:dark}
+html,body{height:100%}body{height:100dvh}
+[hidden]{display:none!important}
+body{background:var(--paper);color:var(--ink);font:14px/1.45 var(--body);margin:0;overflow:hidden}
+*{box-sizing:border-box}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:7px 11px;min-height:36px}
+button:hover{border-color:var(--muted)}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+button:disabled{opacity:.45;cursor:default}
+button.primary{background:var(--green);border-color:var(--green);color:var(--paper);font-weight:650}
+.app{height:100%;display:grid;grid-template-columns:minmax(0,1fr) 340px;grid-template-rows:auto minmax(0,1fr)}
+.bar{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.mark{font:33px/1 var(--display);letter-spacing:-7px;padding-right:7px;color:var(--green)}
+.mark span{color:#b56b3b}
+.brand strong{font:20px/1.1 var(--display);font-weight:400;display:block}
+.brand small{display:block;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted)}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:650;border:1px solid currentColor}
+.pill.ok{color:var(--ok)}.pill.error{color:var(--error)}.pill.warn{color:var(--warn)}
+.bar .spacer{flex:1}
+.bar .actions{display:flex;gap:8px;flex-wrap:wrap}
+.stage{grid-row:2;grid-column:1;position:relative;min-height:0;background:var(--edge)}
+#map{width:100%;height:100%;display:block;touch-action:none;user-select:none;-webkit-user-select:none}
+.mapbar{position:absolute;right:12px;top:12px;display:flex;flex-direction:column;gap:6px}
+.mapbar button{width:38px;padding:0;font-weight:700}
+.floater{position:absolute;left:50%;top:12px;transform:translateX(-50%);display:flex;gap:6px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:5px 6px 5px 12px;box-shadow:0 4px 18px rgba(20,40,30,.14);max-width:calc(100% - 80px)}
+.floater span{font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.scale{position:absolute;left:12px;bottom:12px;font:11px var(--mono);color:var(--ink);background:color-mix(in srgb,var(--panel) 85%,transparent);padding:4px 8px;border-radius:7px}
+.panel{grid-row:2;grid-column:2;border-left:1px solid var(--line);background:var(--panel);overflow:auto;padding:16px;display:flex;flex-direction:column;gap:18px}
+.panel h2{font:19px/1.2 var(--display);font-weight:400;margin:0 0 6px}
+.eyebrow{font-size:10px;font-weight:750;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+.panel p{margin:0;color:var(--muted)}
+.rows{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:8px 0;font-variant-numeric:tabular-nums}
+.rows dt{color:var(--muted)}.rows dd{margin:0}
+.tools{display:flex;gap:8px;flex-wrap:wrap}
+.field{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+.field input,.field select{border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:6px 8px;width:96px}
+.checks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.checks li button{width:100%;text-align:left;display:flex;gap:8px;align-items:flex-start;border-radius:10px;padding:8px 10px}
+.checks .dot{flex:none;width:9px;height:9px;border-radius:50%;margin-top:6px}
+.checks .error .dot{background:var(--error)}.checks .warning .dot{background:var(--warn)}
+.legend{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:4px 10px;font-size:12px}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.saveinfo{font-size:12px;color:var(--muted)}
+.tabs{display:flex;gap:2px;margin:-16px -16px 0;padding:6px 10px 0;border-bottom:1px solid var(--line);position:sticky;top:-16px;background:var(--panel);z-index:2}
+.tabs button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;font-weight:650;color:var(--muted);padding:8px 10px}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--gold)}
+.pane{display:flex;flex-direction:column;gap:18px}
+.search{width:100%;border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:8px 10px}
+.cat h3{font:16px/1.2 var(--display);font-weight:400;margin:4px 0 8px;display:flex;align-items:center;gap:8px}
+.cat h3 i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.cat h3 small{margin-left:auto;font:11px var(--body);color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:6px}
+.card{position:relative}
+.card>button:first-child{width:100%;height:100%;display:flex;flex-direction:column;align-items:stretch;gap:3px;text-align:left;padding:8px;border-radius:10px}
+.card svg{width:100%;height:46px;display:block}
+.card b{font-size:12.5px;line-height:1.25;font-weight:650}
+.card small{font-size:11px;color:var(--muted)}
+.card .x{position:absolute;top:4px;right:4px;min-height:0;width:24px;height:24px;padding:0;border-radius:7px;font-size:12px;line-height:1}
+.sides{display:grid;grid-template-columns:1fr auto auto;gap:6px 8px;align-items:center}
+.field input[type=color]{padding:2px;height:34px}
+.field input.wide{width:100%}
+.note{font-size:12px;color:var(--muted)}
+.confirm{display:flex;flex-direction:column;gap:8px;border:1px solid var(--error);border-radius:10px;padding:10px}
+a{color:var(--green)}
+svg text{font-family:var(--body);pointer-events:none}
+.unit{cursor:grab}.unit.dragging{cursor:grabbing}
+@media (max-width:820px){
+  .app{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(180px,1.2fr) minmax(160px,1fr)}
+  .stage{grid-row:2;grid-column:1}
+  .panel{grid-row:3;grid-column:1;border-left:0;border-top:1px solid var(--line)}
+  .bar{padding:8px 16px}
+  .brand strong{font-size:17px}.mark{font-size:26px}
+}
+@media (max-width:1000px) and (max-height:500px) and (orientation:landscape){
+  .app{grid-template-columns:minmax(0,1fr) 280px;grid-template-rows:auto minmax(0,1fr)}
+  .stage{grid-row:2;grid-column:1}
+  .panel{grid-row:2;grid-column:2;border-top:0;border-left:1px solid var(--line)}
+  .bar{padding:6px 10px;gap:6px}.brand strong{font-size:16px}.brand small{display:none}
+  .bar .actions{gap:4px}.bar button{padding:6px 8px}
+}
+@media (prefers-reduced-motion:no-preference){.floater{transition:opacity .15s}}
+</style>
+
+<div class="app">
+  <header class="bar">
+    <div class="brand"><span class="mark" aria-hidden="true">C<span>Z</span></span><div><strong>Crow-Zero · City Editor</strong><small>Bina bandar sendiri · map editor</small></div></div>
+    <span id="status" class="pill ok" role="status">Checking…</span>
+    <span class="spacer"></span>
+    <div class="actions">
+      <button id="undo" aria-label="Undo" title="Undo (Ctrl+Z)">Undo</button>
+      <button id="redo" aria-label="Redo" title="Redo (Ctrl+Shift+Z)">Redo</button>
+      <button id="new-map">Map kosong</button><button id="import">Import JSON</button><input id="import-file" type="file" accept=".json,application/json" hidden><button id="export">Export JSON</button><button id="save" class="primary">Simpan</button>
+    </div>
+  </header>
+  <main class="stage">
+    <svg id="map" aria-label="Town plan. Drag buildings and roads to move them."></svg>
+    <div class="floater" id="floater" hidden>
+      <span id="floater-name"></span>
+      <button id="turn-left" aria-label="Turn left 90 degrees" title="Turn left (Shift+R)">↺</button>
+      <button id="turn-right" aria-label="Turn right 90 degrees" title="Turn right (R)">↻</button>
+      <button id="deselect" aria-label="Deselect" title="Deselect (Esc)">✕</button>
+    </div>
+    <div class="mapbar">
+      <button id="zoom-in" aria-label="Zoom in">+</button>
+      <button id="zoom-out" aria-label="Zoom out">−</button>
+      <button id="zoom-fit" aria-label="Fit the whole town" title="Fit">⤢</button>
+    </div>
+    <div class="scale" id="scale">10 m</div>
+  </main>
+  <aside class="panel">
+    <nav class="tabs" role="tablist" aria-label="Editor tools">
+      <button role="tab" data-tab="edit" aria-selected="true">Edit</button>
+      <button role="tab" data-tab="library" aria-selected="false">+ Aset</button>
+      <button role="tab" data-tab="town" aria-selected="false">Saiz peta</button>
+    </nav>
+    <div class="pane" data-pane="library" hidden>
+      <input id="lib-search" class="search" type="search" placeholder="Cari bangunan, pokok atau kategori…" aria-label="Search buildings">
+      <div class="pane" id="library"></div>
+    </div>
+    <div class="pane" data-pane="town" id="town-size" hidden></div>
+    <div class="pane" data-pane="edit">
+    <section id="selection"></section>
+    <section>
+      <p class="eyebrow">Layout checks</p>
+      <ul class="checks" id="checks"></ul>
+    </section>
+    <section>
+      <p class="eyebrow">Save and try it</p>
+      <div class="tools">
+        <button id="save-2" class="primary">Save layout</button>
+        <button id="copy">Copy layout</button>
+        <a id="preview" class="preview" href="#" target="_blank" rel="noopener">Preview FPS ↗</a>
+      </div>
+      <p class="saveinfo" id="saveinfo" role="status" style="margin-top:8px"></p>
+      <textarea id="copybox" hidden readonly style="width:100%;height:90px;margin-top:8px;font:11px var(--mono)"></textarea>
+    </section>
+    <section>
+      <p class="eyebrow">Districts</p>
+      <div class="legend" id="legend"></div>
+    </section>
+    <section id="reset-zone">
+      <button id="reset">Map kosong baru</button>
+    </section>
+    </div>
+  </aside>
+</div>
+
+<script type="module">
+const TOWN_PLAN = {"version":1,"name":"Bandar Baru","bounds":{"minX":-100,"maxX":100,"minZ":-100,"maxZ":100},"units":[],"roads":[]};
+
+// Town plan geometry shared by the game, the tests and the map editor. The
+// editable positions live in town-plan.js; everything here is derived from
+// them. Rects are [x, z, w, d] in metres, centred, in a unit's own frame.
+// The town edge comes from the plan's optional `bounds`, which the map editor
+// grows or shrinks a side at a time; GROUND is the land around it.
+const DEFAULT_BOUNDS = { minX: -100, maxX: 100, minZ: -100, maxZ: 100 };
+const BOUNDS_LIMIT = 200;
+function boundsOf(plan) {
+  const b = { ...DEFAULT_BOUNDS, ...(plan?.bounds || {}) }, L = BOUNDS_LIMIT;
+  return { minX: Math.max(-L, Math.min(-20, +b.minX)), maxX: Math.min(L, Math.max(20, +b.maxX)), minZ: Math.max(-L, Math.min(-20, +b.minZ)), maxZ: Math.min(L, Math.max(20, +b.maxZ)) };
+}
+const groundOf = B => ({ minX: B.minX - 11, maxX: B.maxX + 13, minZ: B.minZ - 13, maxZ: B.maxZ + 13 });
+// The river is fixed terrain. Every road that crosses it gets a bridge as
+// wide as the road; the old footbridge stays where no road crosses nearby.
+// No fixed river in a blank city. Keep the shared terrain interface for roads/grass.
+const RIVER = { x: 10000, w: 0 };
+const BANKS = [RIVER.x - 5, RIVER.x + 5];
+function bridgesFor() { return []; }
+const DISTRICT_INFO = [
+  { id: 'kampung', name: 'Kampung Melati', short: 'KAMPUNG', color: '#c87537' },
+  { id: 'terrace', name: 'Taman Kenangan', short: 'TERES', color: '#9271b4' },
+  { id: 'pekan', name: 'Pekan lama', short: 'PEKAN', color: '#b95670' },
+  { id: 'community', name: 'Sekolah & komuniti', short: 'KOMUNITI', color: '#4a9270' },
+  { id: 'transport', name: 'Pasar & stesen bas', short: 'PASAR / BAS', color: '#4b8db4' }
+];
+// The 38 numbered places: [name, district, kind].
+const PLACES = {
+  1: ['Rumah Amir', 'kampung', 'home'], 2: ['Rumah Tok', 'kampung', 'house'], 3: ['Rumah Pak Mail', 'kampung', 'house'],
+  4: ['Rumah Mak Cik Salmah', 'kampung', 'house'], 5: ['Rumah Jiran A', 'kampung', 'house'], 6: ['Rumah Jiran B', 'kampung', 'house'],
+  7: ['Rumah Jiran C', 'kampung', 'house'], 8: ['Rumah Atuk', 'kampung', 'house'], 9: ['Wakaf Kebun', 'kampung', 'pavilion'],
+  10: ['Pondok Tepi Sungai', 'kampung', 'pavilion'], 11: ['Rumah Nur', 'terrace', 'terrace'], 12: ['Rumah Kak Lina', 'terrace', 'terrace'],
+  13: ['Rumah Pak Abu', 'terrace', 'terrace'], 14: ['Rumah Mei Ling', 'terrace', 'terrace'], 15: ['Rumah Faiz', 'terrace', 'terrace'],
+  16: ['Rumah Jiran F', 'terrace', 'terrace'], 17: ['Rumah Jiran G', 'terrace', 'terrace'], 18: ['Rumah Jiran H', 'terrace', 'terrace'],
+  19: ['Kedai Sudut Mini', 'terrace', 'mini-shop'], 20: ['Tadika Kenangan', 'terrace', 'nursery'], 21: ['Warung Kak Ita', 'pekan', 'warung'],
+  22: ['Kedai Runcit 99', 'pekan', 'shop'], 23: ['Kedai Gunting', 'pekan', 'shop'], 24: ['Kedai Basikal', 'pekan', 'shop'],
+  25: ['Alat Tulis & Game', 'pekan', 'shop'], 26: ['Kedai Jahit', 'pekan', 'shop'], 27: ['Klinik & Farmasi', 'pekan', 'shop'],
+  28: ['Kedai Roti & Kuih', 'pekan', 'shop'], 29: ['SK Seri Kenangan', 'community', 'school'], 30: ['Kantin Sekolah', 'community', 'canteen'],
+  31: ['Masjid Seri Kenangan', 'community', 'mosque'], 32: ['Balai Raya', 'community', 'hall'], 33: ['Perpustakaan Mini', 'community', 'library'],
+  34: ['Gelanggang Serbaguna', 'community', 'court'], 35: ['Perhentian Bas', 'transport', 'station'], 36: ['Bengkel & Tayar', 'transport', 'workshop'],
+  37: ['Kiosk Petrol Retro', 'transport', 'petrol'], 38: ['Tapak Pasar Malam', 'transport', 'market']
+};
+
+// Stilt houses: the verandah and four stair treads are raised floors.
+function stiltHouse(w, d, extra = {}) {
+  const stairs = [0, 1, 2, 3].map(i => [0, d / 2 + 3.1 - i * .6, 2, .65, .25 + i * .28]);
+  // Every kampung house has a TV aerial on a tall pole and a tempayan of water by the stairs.
+  const props = [['antenna', w / 2 + .45, -1.5], ['tempayan', -1.9, d / 2 + 2.7], ...(extra.props || [])];
+  return { label: 'Kampung house', places: [[0, 0, w, d]], doors: [[0, d / 2 + 4.4]], solids: [[0, 1.725, w + 1, d + 3.45]], floors: [[0, d / 2 + 1.125, w + 1, 2.25, 1.525], ...stairs], ...extra, props };
+}
+const pavilion = (label, w, d) => ({ label, places: [[0, 0, w, d]], doors: [[0, d / 2 + 1.6]], solids: [[0, .25, w + 1, d + 1.5]], floors: [[0, 0, w, d, .17]] });
+const civic = (label, w, d, extra = {}) => ({ label, places: [[0, 0, w, d]], doors: [[0, d / 2 + 1.4]], floors: [], ...extra, solids: [[0, 0, w + 1, d + 1], ...(extra.solids || [])] });
+
+// Street props from around 2001 (see props.js). `r` is the footprint kept clear
+// of doors, people and trees, `hit` the round collider at its centre. `wall`
+// props hang on their own building; `road` props may stand on a road
+// (`dirt`: on a dirt lane only).
+const PROPS = {
+  motor: { r: .9, hit: .55, road: true }, chairs: { r: 1.1, hit: .9, road: 'dirt' }, kopitiam: { r: .8, hit: .65 }, gas: { r: .25, hit: .2 },
+  freezer: { r: .75, hit: .6 }, crates: { r: .55, hit: .5 }, postbox: { r: .35, hit: .26 }, phone: { r: .6, hit: .45 },
+  bin: { r: .35, hit: .3 }, tempayan: { r: .4, hit: .36 }, drum: { r: .35, hit: .32 }, cart: { r: 1, hit: .75 },
+  rack: { r: .8, hit: .6 }, board: { r: .45, hit: .3 }, ampaian: { r: 1.6, hit: 0 }, banner: { r: .5, hit: 0, road: 'dirt' },
+  roadsign: { r: .3, hit: .06, road: true }, antenna: { r: .1, hit: .07, wall: true }, dish: { wall: true }, aircon: { wall: true }, poster: { wall: true }
+};
+
+// Each kind lists, in its own frame: `places` (one rect per numbered place),
+// `solids` (what may not overlap another unit), `floors` ([x,z,w,d,height]
+// raised walkable ground), `spots` ([x,z,heading] for people) and `decor`
+// ([species, x, z, size] trees, planted only where they fit, see planting.js;
+// `decorVariants` offers several yards to pick from), and `props`
+// ([name, x, z, quarter turns, height, print]). `doors` gives one
+// interaction point per place, where the player talks to its contact.
+// `open` kinds may sit on roads. `cat` files each kind under a CATEGORIES
+// heading in the editor's library; `unique` kinds appear once (their builders
+// hang on a numbered place); the others can be added again as extra,
+// unnumbered buildings.
+const CATEGORIES = [
+  { id: 'rumah', name: 'Rumah' }, { id: 'kedai', name: 'Kedai & pekan' }, { id: 'komuniti', name: 'Sekolah & komuniti' },
+  { id: 'rehat', name: 'Taman & rehat' }, { id: 'jalan', name: 'Pengangkutan' }, { id: 'kenderaan', name: 'Kenderaan & orang' }
+];
+const KINDS = {
+  home: stiltHouse(10, 8, {
+    label: 'Rumah Amir and yard',
+    solids: [[0, 1.725, 11, 11.45], [0, -7, 20, .12], [-10, 3.5, .12, 21], [-6.5, 14, 7, .12], [7.5, 14, 5, .12], [-7.5, -9, 7.5, .4], [9, 6, 2.4, .55]],
+    spots: { spawn: [0, 11, 0] },
+    props: [['motor', 6.8, 9.8, 1], ['gas', 4.6, -4.6], ['drum', -4.8, -4.8]],
+    decor: [['kelapa', -14, 4, 1.1], ['kelapa', 11.5, -4.5, .95], ['rambutan', -7.2, 10.5, .8], ['pisang', 7.8, -4.6, .95], ['pisang', -14, 11.5, .9], ['mangga', -13.5, 19, .9], ['serai', -8.6, -5.2], ['pandan', -6.6, -5.6], ['cili', -8.7, -2.6]],
+    patches: [[-6, 8, 6], [-5, 12, 5], [6, 3, 4], [8, 13, 5], [-7, -4, 5]]
+  }),
+  // Every kampung house gets one of three yards, picked by its id.
+  house: stiltHouse(9, 7, { props: [['motor', 5.6, 6.2, 1]], decorVariants: [
+    [['kelapa', -6.8, -1.5, 1], ['pisang', 6.4, -3.2, .9], ['rambutan', 0, -7.8, .8], ['serai', -3.6, 8.2]],
+    [['kelapa', 6.8, .5, 1.05], ['kelapa', -7, -4, .9], ['pisang', -6.6, 4.6, .9], ['mangga', .5, -8.4, .85]],
+    [['nangka', -7, -1, .9], ['pisang', 6.4, -3, .95], ['pinang', 6.8, 3.6, 1], ['jambu', 0, -7.8, .8], ['pandan', -3.8, 8.4]]
+  ] }),
+  wakaf: { ...pavilion('Wakaf (garden shelter)', 7, 6), props: [['tempayan', 4.3, 3.2], ['drum', -4.3, 3.4]], decor: [['rambutan', -6.8, -1, .9], ['mangga', 6.8, 1.5, .85], ['pisang', -5.6, 4.8, .85]] },
+  pondok: { ...pavilion('Riverside hut', 4, 5), decor: [['kelapa', 0, -5.6, 1], ['buluh', 0, 6.4, .9], ['pisang', -4, 0, .85]] },
+  canteen: { ...pavilion('School canteen', 10, 6), props: [['crates', -5.8, -1.6], ['gas', 5.7, -2.2]], decor: [['ketapang', 8, 1, .8]] },
+  terrace: { label: 'Terrace house', places: [[0, 0, 6.8, 7]], doors: [[.9, -5]], solids: [[0, 0, 6.8, 7], [-1.6, -6.5, 3.6, .12], [2.5, -6.5, 1.8, .12]], floors: [[0, -5.2, 6.8, 3.5, .16]],
+    props: [['dish', -2.9, -3.62, 2, 3], ['aircon', 2.6, -3.68, 2, 2.6], ['motor', -1.9, -5.1, 1]], decor: [['bungaraya', -2.8, -5.6, .8], ['bungaraya', 2.8, -5.6, .8]] },
+  minishop: civic('Corner shop', 9, 8, { props: [['freezer', 2.9, 4.75], ['phone', -3.6, 5]], decor: [['kelapa', -6.4, -2.5, .9], ['bungaraya', 6, 3.5, .8]] }),
+  nursery: civic('Nursery', 9, 10, { doors: [[1.6, 6.2]], solids: [[-.9, 7, 3, .6]], decor: [['jambu', 6.6, -3, .8], ['bungaraya', 3.8, 7, .8], ['bungaraya', -4.4, 7, .8]] }),
+  hall: civic('Village hall', 13, 8, { props: [['banner', 0, 8.6, 0, 0, 'gotong']], decor: [['kelapa', -8.2, -2, .95]] }),
+  library: civic('Library', 12, 8, { props: [['bin', 4.6, 5.2]], decor: [['ketapang', 8, -2, .8]] }),
+  petrol: civic('Petrol kiosk and pumps', 9, 8, { props: [['gas', 4.5, 4.8], ['gas', 4.95, 4.55], ['drum', -4.6, 4.7]], solids: [[0, -10, 10, 7]], decor: [['kelapa', 6.6, 2.5, .95], ['kelapa', -6.4, 2, .9], ['pisang', 6.4, -4.5, .85]] }),
+  warung: { label: 'Warung Kak Ita', places: [[0, 0, 11, 6.5]], doors: [[0, 6]], solids: [[0, 0, 12.5, 8.4], [-6, 3.5, .62, .62], [6, 3.5, .62, .62]], floors: [[0, 0, 11, 6.5, .275]], spots: { stall: [0, 6, .2] },
+    props: [['chairs', -4.2, 6.9], ['chairs', 4.2, 6.9, 0, 0, 1], ['gas', -4.6, -2.75], ['crates', 4.8, -2.6], ['poster', -4.2, -2.98, 0, 1.7, 'menu']], decor: [['kelapa', -7.8, -3, 1.05], ['pisang', 7.8, -3.2, .95], ['pisang', -8.2, 1.8, .85], ['serai', 7.6, 1.6]] },
+  shophouses: {
+    label: 'Shophouse terrace (7 shops)',
+    places: [0, 1, 2, 3, 4, 5, 6].map(i => [-27 + i * 9, 0, 8.8, 10]),
+    doors: [0, 1, 2, 3, 4, 5, 6].map(i => [-27 + i * 9, 6.6]),
+    solids: [[0, 1.48, 63, 12.95], [-7, 9, 2.4, .55]], floors: [[0, 6.475, 63, 2.95, .26]],
+    // On the five-foot way: Pak Rahman's ice-cream freezer and prepaid-card board,
+    // the photostat board at the stationers', bread crates and a kopitiam table.
+    props: [['freezer', -23.8, 5.45], ['board', -30.2, 5.6, 0, 0, 'prabayar'], ['board', 3.2, 5.6, 0, 0, 'photostat'], ['crates', 24, 5.4], ['kopitiam', 30.1, 6.4],
+      ['motor', -21.5, 9.5, 1], ['motor', 12.6, 9.5, 1, 0, 1], ['motor', 14, 9.5, 1, 0, 2]]
+  },
+  school: {
+    label: 'School compound', yard: true,
+    places: [[-5.5, -4, 38, 10]], doors: [[-5.5, 5.4]],
+    solids: [[-5.5, -4, 38, 10], [19.5, -3, 9, 20], [0, -15, 51, .12], [-25.5, 0, .12, 30], [25.5, 0, .12, 30], [-17.5, 15, 16, .12], [12, 15, 27, .12], [-21.5, 14.3, .3, .3], [10.5, 14.3, .3, .3]],
+    floors: [[-5.5, 2.5, 40, 3.5, .23], [-5.5, 10, 31, 9, .13]],
+    props: [['roadsign', -11, 15.5, 0, 0, 'sekolah'], ['roadsign', 0, 15.5, 0, 0, 'sekolah']],
+    // A rain tree shades the assembly ground; bunga raya lines the front fence.
+    decor: [['hujan', -22.6, 10.5, .75], ['ketapang', 13, 11, .8], ...[-24, -19, -16, -13, 1, 4, 7, 13, 16, 19, 22].map(x => ['bungaraya', x, 13.9, .8])]
+  },
+  court: { label: 'Sports court', open: true, places: [[0, 0, 14, 8]], doors: [[0, 5]], solids: [[0, 0, 14, 8]], floors: [[0, 0, 14, 8, .18]] },
+  mosque: {
+    label: 'Mosque and plaza', places: [[0, 0, 12, 11]], doors: [[0, 8.9]], props: [['rack', 4.8, 9]], solids: [[0, .2, 16.7, 15.1]], floors: [[0, 0, 19, 19, .21]],
+    decor: [['kelapa', -15, -5, 1], ['kelapa', 18, -4, 1], ['kemboja', -12, 7.5, .9], ['kemboja', 12, 7.5, .9], ['hujan', 20, 10, .8]]
+  },
+  busstop: { label: 'Bus shelter', open: true, places: [[0, 0, 13, 9]], doors: [[0, 3.2]], props: [['phone', 7.4, 0, 3], ['bin', -7.2, 1.5]], solids: [[0, 0, 13, 9]], floors: [[0, 0, 13, 9, .18]], decor: [['hujan', -1, -9, .9]] },
+  workshop: { label: 'Tyre workshop', places: [[0, 0, 10, 10]], doors: [[0, -6.3]], props: [['drum', 4.2, -5.9], ['motor', -3.2, -6.6, 1, 0, 1]], solids: [[0, 0, 11, 11]], floors: [[0, 0, 10, 10, .19]], decor: [['kelapa', 6, 8, .9], ['pisang', 7.6, 2.5, .9]] },
+  market: { label: 'Night market', open: true, places: [[0, 0, 24, 20]], doors: [[0, -9.8]], props: [['cart', 11.5, 2, 1], ['gas', -11.8, 1.5]], solids: [[0, 0, 22, 17]], floors: [], decor: [['kelapa', -12.5, -11, .9], ['hujan', 14, 11.5, .85], ['kelapa', 14.5, -10, .9]] },
+  square: {
+    label: 'Town square', open: true, places: [],
+    solids: [[0, 0, 22, 17]], floors: [[0, 0, 22, 17, .09]],
+    props: [['postbox', 2.6, 2.6], ['phone', -2.8, -2.8, 2], ['banner', 0, 7.2, 0, 0, 'merdeka']],
+    decor: [['ketapang', -12, -6, .8], ['ketapang', 12, -6, .8], ['ketapang', -12, 7, .8], ['ketapang', 12, 7, .8]]
+  },
+  bus: { label: 'Town bus', vehicle: true, places: [], solids: [[0, 0, 4.3, 10.3]], floors: [] },
+  sedan: { label: 'Family car', vehicle: true, places: [], solids: [[0, 0, 1.9, 4.5]], floors: [] },
+  passerby: { label: 'Passer-by', vehicle: true, places: [], solids: [[0, 0, .6, .6]], floors: [] }
+};
+for (const [kind, cat, unique] of [['home', 'rumah', 1], ['house', 'rumah'], ['terrace', 'rumah'], ['minishop', 'kedai'], ['warung', 'kedai', 1], ['shophouses', 'kedai', 1],
+  ['market', 'kedai'], ['school', 'komuniti', 1], ['canteen', 'komuniti', 1], ['nursery', 'komuniti'], ['mosque', 'komuniti', 1], ['hall', 'komuniti'], ['library', 'komuniti'],
+  ['court', 'komuniti'], ['wakaf', 'rehat'], ['pondok', 'rehat'], ['square', 'rehat'], ['busstop', 'jalan'], ['workshop', 'jalan'], ['petrol', 'jalan', 1],
+  ['bus', 'kenderaan', 1], ['sedan', 'kenderaan'], ['passerby', 'kenderaan']]) Object.assign(KINDS[kind], { cat, unique: !!unique });
+
+// City maps are independent of the RPG story. Every building can be copied.
+for (const def of Object.values(KINDS)) def.unique = false;
+const TREE_SPECIES = {
+  kelapa: 'Pokok kelapa', pinang: 'Pokok pinang', pisang: 'Pokok pisang', buluh: 'Buluh',
+  rambutan: 'Pokok rambutan', mangga: 'Pokok mangga', jambu: 'Pokok jambu', nangka: 'Pokok nangka',
+  durian: 'Pokok durian', getah: 'Pokok getah', hujan: 'Pokok hujan', ketapang: 'Pokok ketapang',
+  kemboja: 'Pokok kemboja', beringin: 'Pokok beringin', bungaraya: 'Bunga raya', serai: 'Serai', pandan: 'Pandan', cili: 'Cili'
+};
+CATEGORIES.push({id:'pokok',name:'Pokok & tumbuhan'}, {id:'misi',name:'Titik mula'});
+for (const [species,label] of Object.entries(TREE_SPECIES)) KINDS['tree-'+species] = {
+  label, cat:'pokok', species, places:[], solids:[[0,0,1.5,1.5]], floors:[]
+};
+KINDS.spawn = {label:'Titik mula FPS',cat:'misi',unique:true,open:true,places:[],solids:[[0,0,1,1]],floors:[]};
+
+// Custom buildings (kind 'custom') carry their own size and look in the plan:
+// { style, w, d, storeys, wall, roofColor, roof: 'pitched'|'flat', name, cat }.
+// Each style reuses a built-in shape, so a new building needs no new code.
+const CUSTOM_STYLES = {
+  block: { label: 'Bangunan batu (kedai, pejabat)', def: (w, d) => civic('Custom building', w, d) },
+  kampung: { label: 'Rumah kampung bertiang', def: (w, d) => stiltHouse(w, d, { label: 'Custom kampung house' }) },
+  wakaf: { label: 'Wakaf / pondok terbuka', def: (w, d) => pavilion('Custom shelter', w, d) },
+  plaza: { label: 'Dataran / padang (boleh di atas jalan)', def: (w, d) => ({ label: 'Custom plaza', open: true, places: [[0, 0, w, d]], solids: [[0, 0, w, d]], floors: [[0, 0, w, d, .09]] }) }
+};
+const CUSTOM_DEFAULTS = { style: 'block', w: 9, d: 8, storeys: 1, wall: '#e8dbb8', roofColor: '#ab6046', roof: 'pitched', name: '', cat: 'kedai' };
+const clamp = (v, lo, hi, fallback) => Number.isFinite(+v) ? Math.min(hi, Math.max(lo, +v)) : fallback;
+function customLook(u) {
+  const c = { ...CUSTOM_DEFAULTS, ...u };
+  const colour = (v, fallback) => /^#[0-9a-f]{6}$/i.test(v) ? v : fallback;
+  return { ...c, style: CUSTOM_STYLES[c.style] ? c.style : 'block', w: clamp(c.w, 2, 80, 9), d: clamp(c.d, 2, 80, 8), storeys: Math.round(clamp(c.storeys, 1, 4, 1)),
+    wall: colour(c.wall, CUSTOM_DEFAULTS.wall), roofColor: colour(c.roofColor, CUSTOM_DEFAULTS.roofColor), roof: c.roof === 'flat' ? 'flat' : 'pitched', name: String(c.name || '').slice(0, 40) };
+}
+const kindDef = u => {
+  if (KINDS[u.kind]?.species) { const size = Math.max(.4, Math.min(2, Number(u.size) || 1)); return {...KINDS[u.kind],solids:[[0,0,1.5*size,1.5*size]]}; }
+  if (u.kind !== 'custom') return KINDS[u.kind];
+  const c = customLook(u);
+  return { ...CUSTOM_STYLES[c.style].def(c.w, c.d), label: c.name || 'Custom building', cat: c.cat, custom: true };
+};
+
+// Quarter-turn transforms match Three.js rotation.y = rot·π/2:
+// world = (x + lx·cos + lz·sin, z − lx·sin + lz·cos).
+const COS = [1, 0, -1, 0], SIN = [0, 1, 0, -1];
+const turn = rot => ((Math.round(rot || 0) % 4) + 4) % 4;
+function toWorld(unit, lx, lz) {
+  const r = turn(unit.rot);
+  return [unit.x + lx * COS[r] + lz * SIN[r], unit.z - lx * SIN[r] + lz * COS[r]];
+}
+function rectToWorld(unit, [x, z, w, d]) {
+  const [wx, wz] = toWorld(unit, x, z);
+  return turn(unit.rot) % 2 ? [wx, wz, d, w] : [wx, wz, w, d];
+}
+const headingToWorld = (unit, heading) => heading + turn(unit.rot) * Math.PI / 2;
+function bounds(rects) {
+  if (!rects.length) return null;
+  let a = Infinity, b = -Infinity, c = Infinity, e = -Infinity;
+  for (const [x, z, w, d] of rects) { a = Math.min(a, x - w / 2); b = Math.max(b, x + w / 2); c = Math.min(c, z - d / 2); e = Math.max(e, z + d / 2); }
+  return [(a + b) / 2, (c + e) / 2, b - a, e - c];
+}
+const overlap = (p, q, gap = 0) => Math.abs(p[0] - q[0]) < (p[2] + q[2]) / 2 + gap && Math.abs(p[1] - q[1]) < (p[3] + q[3]) / 2 + gap;
+const EPS = -.02;
+
+// Everything the game needs, derived from one plan.
+function derive(plan) {
+  const units = plan.units.map(u => {
+    const def = kindDef(u);
+    if (!def) throw new Error(`Unknown kind ${u.kind} for ${u.id}`);
+    const solids = def.solids.map(r => rectToWorld(u, r));
+    const floors = (def.floors || []).map(f => [...rectToWorld(u, f), f[4]]);
+    const places = (u.places || []).map((id, i) => ({ id, rect: rectToWorld(u, def.places[i]) }));
+    return { ...u, rot: turn(u.rot), def, solids, floors, places, area: bounds([...solids, ...floors.map(f => f.slice(0, 4)), ...places.map(p => p.rect)]) };
+  });
+  const buildings = units.flatMap(u => u.places.map(({ id, rect: [x, z, w, d] }, i) => {
+    const [name, zone, kind] = PLACES[id], [dx, dz] = toWorld(u, ...(u.def.doors?.[i] || [u.def.places[i][0], u.def.places[i][1] + u.def.places[i][3] / 2 + 1.5]));
+    return { id, name, zone, kind, x, z, w, d, unit: u.id, door: { x: dx, z: dz } };
+  })).sort((a, b) => a.id - b.id);
+  const districts = DISTRICT_INFO.map(info => {
+    const box = bounds(buildings.filter(b => b.zone === info.id).map(b => [b.x, b.z, b.w, b.d])) || [0, 0, 0, 0];
+    return { ...info, x: box[0], z: box[1], w: box[2] + 8, d: box[3] + 8 };
+  });
+  const spot = (kind, name) => {
+    const u = units.find(unit => unit.kind === kind), s = u && u.def.spots?.[name];
+    if (!s) return null;
+    const [x, z] = toWorld(u, s[0], s[1]); return { x, z, heading: headingToWorld(u, s[2]) };
+  };
+  // Nur starts just outside her terrace gate, facing the street.
+  const nurHome = units.find(u => (u.places || []).some(p => p.id === 11));
+  const spawnNur = nurHome && (() => { const i = nurHome.places.findIndex(p => p.id === 11), [lx, , , ] = nurHome.def.places[i], [x, z] = toWorld(nurHome, lx + .9, -8.2); return { x, z, heading: headingToWorld(nurHome, Math.PI) }; })();
+  return {
+    units, buildings, districts, roads: plan.roads.map(r => ({ ...r })), bridges: bridgesFor(plan.roads),
+    floors: units.flatMap(u => u.floors),
+    spots: { spawn: (() => { const u=units.find(u=>u.kind==='spawn'); return u ? {x:u.x,z:u.z,heading:headingToWorld(u,0)} : {x:0,z:0,heading:0}; })(), spawnNur, stall: spot('warung', 'stall') },
+    props: units.flatMap(u => (u.def.props || []).map(([name, lx, lz, t = 0, y = 0, print = 0]) => {
+      const [x, z] = toWorld(u, lx, lz); return { name, x, z, heading: headingToWorld(u, t * Math.PI / 2), y, print, unit: u.id };
+    })),
+    passersby: units.filter(u => u.kind === 'passerby').map(u => ({ x: u.x, z: u.z, heading: headingToWorld(u, 0), who: u.who || 'nur' }))
+  };
+}
+
+function validatePlan(plan) {
+  if (!plan || typeof plan!=='object' || !Array.isArray(plan.units) || !Array.isArray(plan.roads)) return ['Map must contain units and roads arrays.'];
+  const errors=[];
+  if(plan.version!==1)errors.push('Unsupported map version.');
+  if(plan.units.length>2000 || plan.roads.length>1000)errors.push('Map exceeds 2000 objects or 1000 roads.');
+  if(plan.bounds && (!Object.values(plan.bounds).every(Number.isFinite) || !['minX','maxX','minZ','maxZ'].every(k=>Number.isFinite(plan.bounds[k]))))errors.push('Invalid map bounds.');
+  for(const u of plan.units){
+    if(!u || typeof u.id!=='string' || !Object.hasOwn(KINDS,u.kind) && u.kind!=='custom' || ![u.x,u.z].every(Number.isFinite) || u.rot!==undefined && (!Number.isInteger(u.rot) || u.rot<0 || u.rot>3)) { errors.push('Invalid object or position.'); continue; }
+    if(u.size!==undefined && (!Number.isFinite(u.size)||u.size<.4||u.size>2))errors.push('Tree size must be between 0.4 and 2.');
+    if(u.places!==undefined && (!Array.isArray(u.places)||u.places.length>(kindDef(u).places?.length||0)||u.places.some(id=>!PLACES[id])))errors.push('Invalid original place references.');
+    for(const k of ['w','d','storeys'])if(u[k]!==undefined&&!Number.isFinite(u[k]))errors.push('Invalid building dimensions.');
+    if(u.name!==undefined&&typeof u.name!=='string')errors.push('Invalid building name.');
+  }
+  if(new Set(plan.roads.map(r=>r?.id)).size!==plan.roads.length)errors.push('Two roads share one id.');
+  for(const r of plan.roads)if(!r || typeof r.id!=='string' || !['asphalt','dirt'].includes(r.kind) || ![r.x,r.z,r.w,r.d].every(Number.isFinite) || r.w<=0 || r.d<=0 || r.w>400 || r.d>400)errors.push('Invalid road geometry.');
+  if(plan.templates!==undefined && (!Array.isArray(plan.templates)||plan.templates.some(t=>!t||typeof t.id!=='string'||typeof t.name!=='string')))errors.push('Invalid building templates.');
+  return errors;
+}
+function encodePlan(plan) { return btoa(Array.from(new TextEncoder().encode(JSON.stringify(plan)),c=>String.fromCharCode(c)).join('')).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+function decodePlan(text) { return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(text.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0)))); }
+
+// Layout checks shared by the tests and the editor. Errors make a plan
+// unusable; warnings are worth a look but still play.
+function planProblems(plan) {
+  const invalid = validatePlan(plan);
+  if (invalid.length) return invalid.map(text=>({level:'error',units:[],text}));
+  const problems = [], town = derive(plan), B = boundsOf(plan);
+  const river = [RIVER.x, 0, RIVER.w, 2 * BOUNDS_LIMIT + 40];
+  const label = u => `${u.def.label}${u.places.length ? ' (' + u.places.map(p => p.id).join(', ') + ')' : ''}`;
+  for (const u of town.units) {
+    const edges = u.def.vehicle ? u.solids : u.places.map(p => p.rect);
+    for (const [x, z, w, d] of edges.length ? edges : u.solids)
+      if (x - w / 2 < B.minX - .01 || x + w / 2 > B.maxX + .01 || z - d / 2 < B.minZ - .01 || z + d / 2 > B.maxZ + .01) { problems.push({ level: 'error', units: [u.id], text: `${label(u)} is outside the town edge.` }); break; }
+    if (u.solids.some(r => overlap(r, river, EPS))) problems.push({ level: 'error', units: [u.id], text: `${label(u)} is in the river.` });
+  }
+  if (new Set(plan.units.map(u => u.id)).size !== plan.units.length) problems.push({ level: 'error', units: [], text: 'Two buildings share one id.' });
+  for (const kind of Object.keys(KINDS).filter(k => KINDS[k].unique)) {
+    const same = town.units.filter(u => u.kind === kind);
+    if (same.length > 1) problems.push({ level: 'error', units: same.slice(1).map(u => u.id), text: `There can be only one ${KINDS[kind].label.toLowerCase()}.` });
+  }
+  for (let i = 0; i < town.units.length; i++) for (let j = i + 1; j < town.units.length; j++) {
+    const a = town.units[i], b = town.units[j];
+    if (!overlap(a.area, b.area, 0)) continue;
+    if (a.solids.some(p => b.solids.some(q => overlap(p, q, EPS)))) problems.push({ level: 'error', units: [a.id, b.id], text: `${label(a)} overlaps ${label(b)}.` });
+  }
+  for (const u of town.units) {
+    if (u.def.vehicle || u.def.open) continue;
+    for (const r of town.roads) if (r.kind === 'asphalt' && (u.places.length ? u.places.map(p => p.rect) : u.solids).some(rect => overlap(rect, [r.x, r.z, r.w, r.d], EPS))) problems.push({ level: 'warning', units: [u.id], roads: [r.id], text: `${label(u)} sits on the ${r.id.replace(/-/g, ' ')}.` });
+  }
+  for (const r of town.roads) {
+    const inRiver = r.x - r.w / 2 < BANKS[1] && r.x + r.w / 2 > BANKS[0];
+    if (inRiver && !town.bridges.some(b => b.road === r.id)) problems.push({ level: 'warning', units: [], roads: [r.id], text: `The ${r.id.replace(/-/g, ' ')} runs into the river. Roads get a bridge only when they cross it from bank to bank, east–west.` });
+  }
+  for (const r of town.roads) if (r.x-r.w/2<B.minX || r.x+r.w/2>B.maxX || r.z-r.d/2<B.minZ || r.z+r.d/2>B.maxZ)
+    problems.push({level:'error',units:[],roads:[r.id],text:`Road ${r.id} is outside the town edge.`});
+  return problems;
+}
+
+// The editor's "Preview in game" link carries a plan in the URL hash
+// (#plan=<base64url JSON>). It applies to that visit only, and only when the
+// plan has no layout errors; otherwise the saved town plan is used.
+function planFromHash(hash) {
+  try {
+    const match = (hash || '').match(/[#&]plan=([A-Za-z0-9_-]+)/);
+    if (!match) return null;
+    const plan = decodePlan(match[1]);
+    return planProblems(plan).some(p => p.level === 'error') ? null : plan;
+  } catch { return null; }
+}
+const PLAN = planFromHash(globalThis.location?.hash) || TOWN_PLAN;
+const PREVIEW = PLAN !== TOWN_PLAN;
+const TOWN_BOUNDS = boundsOf(PLAN);
+const GROUND = groundOf(TOWN_BOUNDS);
+const TOWN = derive(PLAN);
+const UNITS = TOWN.units;
+const BUILDINGS = TOWN.buildings;
+const DISTRICTS = TOWN.districts;
+const ROADS = TOWN.roads;
+const BRIDGES = TOWN.bridges;
+const FLOORS = TOWN.floors;
+const SPOTS = TOWN.spots;
+const PASSERSBY = TOWN.passersby;
+const STREET_PROPS = TOWN.props;
+// Name the district of the nearest numbered place, so labels follow edits.
+function districtAt(x, z) {
+  let best = BUILDINGS[0], distance = Infinity;
+  for (const b of BUILDINGS) {
+    const dx = Math.max(0, Math.abs(x - b.x) - b.w / 2), dz = Math.max(0, Math.abs(z - b.z) - b.d / 2), dist = dx * dx + dz * dz;
+    if (dist < distance) { distance = dist; best = b; }
+  }
+  return DISTRICTS.find(d => d.id === best?.zone) || DISTRICTS[2];
+}
+
+
+// ---------------------------------------------------------------- state
+// On the game's own site the preview opens next door; elsewhere (a Claude artifact) the published game.
+const GAME_URL = new URL('../preview.html', location.href).href;
+const BASE = JSON.stringify(TOWN_PLAN);
+let SNAP = .5, gridStep = 10, showGrid = true, tab = 'edit';
+try { ({ snap: SNAP = .5, grid: gridStep = 10, show: showGrid = true } = JSON.parse(localStorage.getItem('crow-zero-view-v1') || '{}')); } catch { /* storage unavailable */ }
+const $ = id => document.getElementById(id);
+const svg = $('map'), NS = 'http://www.w3.org/2000/svg';
+let plan = JSON.parse(BASE), town = derive(plan), problems = planProblems(plan);
+let selected = null; // {type: 'unit'|'road', id}
+let history = [BASE], step = 0, dirty = false, savedAt = null, storageError = null;
+const view = { cx: -1, cz: 0, scale: 4 };
+const zoneColor = Object.fromEntries(DISTRICT_INFO.map(d => [d.id, d.color]));
+const kindColor = { square: '#7f9c6a', bus: '#557a8c', sedan: '#557a8c', passerby: '#b15c33' };
+const catColor = { rumah: '#c87537', kedai: '#b95670', komuniti: '#4a9270', pokok:'#638552', misi:'#c99c4e', rehat: '#7f9c6a', jalan: '#4b8db4', kenderaan: '#557a8c' };
+const LOOK = Object.keys(CUSTOM_DEFAULTS);
+const townBounds = () => boundsOf(plan);
+const FACING = ['south', 'east', 'north', 'west'];
+const snap = v => Math.round(v / SNAP) * SNAP;
+const unitById = id => plan.units.find(u => u.id === id);
+const roadById = id => plan.roads.find(r => r.id === id);
+// Plan units list place ids; derived units list {id, rect}. Accept both.
+const placeIds = u => (u.places || []).map(p => typeof p === 'object' ? p.id : p);
+const nameOf = u => { const ids = placeIds(u), def = kindDef(u); return ids.length === 1 ? PLACES[ids[0]][0] : ids.length ? def.label : u.name || (u.kind === 'passerby' ? 'Passer-by spot' : def.label); };
+const colorOf = u => { const ids = placeIds(u); return ids.length ? zoneColor[PLACES[ids[0]][1]] : u.kind === 'custom' ? customLook(u).wall : kindColor[u.kind] || catColor[kindDef(u).cat] || '#888'; };
+// Extra (unnumbered) buildings can be deleted; any kind not marked unique can be added again.
+const canDelete = () => true;
+const canCopy = u => !KINDS[u.kind]?.unique;
+const nextId = base => { let n = 2; while (unitById(`${base}-${n}`)) n++; return `${base}-${n}`; };
+function saveView() { try { localStorage.setItem('crow-zero-view-v1', JSON.stringify({ snap: SNAP, grid: gridStep, show: showGrid })); } catch { /* storage unavailable */ } }
+const roadName = r => r.id.replace(/-/g, ' ').replace(/^\w/, c => c.toUpperCase());
+function readLocal() { try { return JSON.parse(localStorage.getItem('crow-zero-draft-v1') || 'null'); } catch { return null; } }
+function writeLocal() {
+  try { localStorage.setItem('crow-zero-draft-v1', JSON.stringify({ plan, editedAt: Date.now(), savedAt })); storageError = null; }
+  catch { storageError = 'Map belum disimpan pada peranti. Storan penuh atau disekat. Gunakan Export JSON.'; }
+}
+
+// ---------------------------------------------------------------- edits
+function commit() {
+  const json = JSON.stringify(plan);
+  if (json === history[step]) return;
+  history = history.slice(0, step + 1); history.push(json); step = history.length - 1;
+  if (history.length > 200) { history.shift(); step--; }
+  dirty = true; writeLocal(); refresh();
+}
+function load(next, { keepHistory = false } = {}) {
+  plan = JSON.parse(JSON.stringify(next));
+  if (!keepHistory) { history = [JSON.stringify(plan)]; step = 0; }
+  if (selected && !(selected.type === 'unit' ? unitById(selected.id) : roadById(selected.id))) selected = null;
+  refresh();
+}
+function undo() { if (step > 0) { step--; load(JSON.parse(history[step]), { keepHistory: true }); dirty = true; writeLocal(); renderPanel(); } }
+function redo() { if (step < history.length - 1) { step++; load(JSON.parse(history[step]), { keepHistory: true }); dirty = true; writeLocal(); renderPanel(); } }
+function turnSelected(dir) {
+  if (!selected) return;
+  if (selected.type === 'unit') { const u = unitById(selected.id); u.rot = ((u.rot || 0) + (dir > 0 ? 3 : 1)) % 4; }
+  else { const r = roadById(selected.id); [r.w, r.d] = [r.d, r.w]; }
+  commit();
+}
+function nudge(dx, dz) {
+  if (!selected) return;
+  const item = selected.type === 'unit' ? unitById(selected.id) : roadById(selected.id);
+  item.x = snap(item.x + dx); item.z = snap(item.z + dz); commit();
+}
+
+// ---------------------------------------------------------------- drawing
+function el(name, attrs = {}, parent) {
+  const node = document.createElementNS(NS, name);
+  for (const [k, v] of Object.entries(attrs)) if (v !== undefined && v !== null) node.setAttribute(k, v);
+  if (parent) parent.append(node); return node;
+}
+const rect = ([x, z, w, d], attrs, parent) => el('rect', { x: x - w / 2, y: z - d / 2, width: w, height: d, ...attrs }, parent);
+function fitView() {
+  const { width, height } = svg.getBoundingClientRect();
+  const B = townBounds();
+  view.scale = Math.max(.5, Math.min(width / (B.maxX - B.minX + 14), height / (B.maxZ - B.minZ + 14))); view.cx = (B.minX + B.maxX) / 2; view.cz = (B.minZ + B.maxZ) / 2; applyView();
+}
+function applyView() {
+  const { width, height } = svg.getBoundingClientRect();
+  const w = Math.max(1, width) / view.scale, h = Math.max(1, height) / view.scale;
+  svg.setAttribute('viewBox', `${view.cx - w / 2} ${view.cz - h / 2} ${w} ${h}`);
+  const metres = [5, 10, 20, 50].find(m => m * view.scale >= 60) || 50;
+  $('scale').innerHTML = `<span style="display:inline-block;width:${Math.round(metres * view.scale)}px;border-bottom:2px solid currentColor;margin-right:6px"></span>${metres} m`;
+  draw();
+}
+function draw() {
+  svg.textContent = '';
+  const px = 1 / view.scale, css = getComputedStyle(document.documentElement), token = n => css.getPropertyValue(n).trim();
+  const errorUnits = new Set(), warnUnits = new Set(), warnRoads = new Set();
+  for (const p of problems) for (const id of p.units) (p.level === 'error' ? errorUnits : warnUnits).add(id);
+  for (const p of problems) for (const id of p.roads || []) warnRoads.add(id);
+  // Ground, town edge, the fixed river and bridges.
+  const B = townBounds(), G = groundOf(B);
+  rect([(G.minX + G.maxX) / 2, (G.minZ + G.maxZ) / 2, G.maxX - G.minX + 20, G.maxZ - G.minZ + 20], { fill: token('--edge') }, svg);
+  rect([(B.minX + B.maxX) / 2, (B.minZ + B.maxZ) / 2, B.maxX - B.minX, B.maxZ - B.minZ], { fill: token('--lawn') }, svg);
+  const grid = el('g', { stroke: token('--ink'), 'stroke-opacity': .07, 'stroke-width': px }, svg);
+  if (showGrid) {
+    for (let x = Math.ceil(B.minX / gridStep) * gridStep; x <= B.maxX; x += gridStep) el('line', { x1: x, x2: x, y1: B.minZ, y2: B.maxZ, 'stroke-opacity': x % 50 ? .07 : .17 }, grid);
+    for (let z = Math.ceil(B.minZ / gridStep) * gridStep; z <= B.maxZ; z += gridStep) el('line', { y1: z, y2: z, x1: B.minX, x2: B.maxX, 'stroke-opacity': z % 50 ? .07 : .17 }, grid);
+  }
+  // No fixed river: the city starts on empty land.
+  for (const b of town.bridges) rect([b.x, b.z, b.w, b.d], { fill: token('--dirt'), stroke: token('--ink'), 'stroke-opacity': .3, 'stroke-width': px }, svg);
+  // Raised floors and plazas under everything else.
+  for (const u of town.units) for (const f of u.floors) if (f[2] * f[3] > 30) rect(f, { fill: token('--floor'), opacity: .85 }, svg);
+  // Roads: tap to select, drag to move; end handles change the length.
+  for (const r of plan.roads) {
+    const on = selected?.type === 'road' && selected.id === r.id;
+    const node = rect([r.x, r.z, r.w, r.d], { fill: r.kind === 'asphalt' ? token('--asphalt') : token('--dirt'), stroke: on ? token('--select') : warnRoads.has(r.id) ? token('--warn') : 'none', 'stroke-width': on ? 3 * px : 2 * px, 'data-road': r.id, class: 'unit' }, svg);
+    node.append(el('title')); node.firstChild.textContent = roadName(r);
+  }
+  // Units: solids, places with numbers, a front arrow and problem outlines.
+  const labels = [];
+  for (const u of town.units) {
+    const on = selected?.type === 'unit' && selected.id === u.id, color = colorOf(u);
+    const g = el('g', { 'data-unit': u.id, class: 'unit' }, svg);
+    const [ax, az, aw, ad] = u.area, hit = Math.max(aw, ad) < 3 ? 6 * px * 2 : 0;
+    if (hit) rect([ax, az, Math.max(aw, hit), Math.max(ad, hit)], { fill: 'transparent' }, g);
+    for (const s of u.solids) rect(s, { fill: color, 'fill-opacity': u.places.length ? .35 : .7, stroke: color, 'stroke-opacity': .7, 'stroke-width': px }, g);
+    for (const p of u.places) rect(p.rect, { fill: color, 'fill-opacity': .85, stroke: token('--ink'), 'stroke-opacity': .45, 'stroke-width': px }, g);
+    // Front arrow: local +z edge of the unit.
+    const [, , , d0] = u.def.places[0] || u.def.solids[0], tipLocal = (u.def.places[0] || u.def.solids[0])[1] + d0 / 2 + 1.6;
+    const sizeArrow = Math.max(1.1, 7 * px), lx = (u.def.places[0] || u.def.solids[0])[0];
+    const pts = [[lx, tipLocal], [lx - sizeArrow, tipLocal - sizeArrow * 1.2], [lx + sizeArrow, tipLocal - sizeArrow * 1.2]].map(([a, b]) => toWorld(u, a, b).join(',')).join(' ');
+    if (u.kind !== 'passerby') el('polygon', { points: pts, fill: token('--ink'), 'fill-opacity': on ? .9 : .45 }, g);
+    if (errorUnits.has(u.id) || warnUnits.has(u.id)) rect([ax, az, aw + 1, ad + 1], { fill: 'none', stroke: errorUnits.has(u.id) ? token('--error') : token('--warn'), 'stroke-width': 3 * px, 'stroke-dasharray': errorUnits.has(u.id) ? 'none' : `${6 * px} ${4 * px}`, rx: 1 }, g);
+    if (on) rect([ax, az, aw + 2.4, ad + 2.4], { fill: 'none', stroke: token('--select'), 'stroke-width': 2.5 * px, 'stroke-dasharray': `${8 * px} ${5 * px}`, rx: 1.5 }, g);
+    const badge = Math.max(1.8, 9 * px);
+    for (const p of u.places) {
+      el('circle', { cx: p.rect[0], cy: p.rect[1], r: badge, fill: token('--panel'), stroke: token('--ink'), 'stroke-width': px * 1.3 }, g);
+      const t = el('text', { x: p.rect[0], y: p.rect[1], 'font-size': badge * 1.05, 'font-weight': 700, 'text-anchor': 'middle', 'dominant-baseline': 'central', fill: token('--ink') }, g); t.textContent = p.id;
+    }
+    if (on || view.scale > 7) labels.push([ax, az - ad / 2 - Math.max(1.2, 6 * px), nameOf(u), on]);
+  }
+  // Names go on top of every unit so neighbours never cover them.
+  for (const [x, z, text, on] of labels.sort((a, b) => a[3] - b[3])) {
+    const t = el('text', { x, y: z, 'font-size': Math.max(1.6, (on ? 13 : 11) * px), 'font-weight': on ? 750 : 650, 'text-anchor': 'middle', fill: token('--ink'), stroke: token('--lawn'), 'stroke-width': 4 * px, 'paint-order': 'stroke' }, svg);
+    t.textContent = text;
+  }
+  // People: Amir's and Nur's starts and Kak Ita's stall (they move with their buildings).
+  for (const [key, label] of [['spawn', 'Titik mula FPS']]) {
+    const s = town.spots[key]; if (!s) continue;
+    el('circle', { cx: s.x, cy: s.z, r: Math.max(.8, 4 * px), fill: key === 'spawn' ? '#b15c33' : token('--green'), stroke: token('--panel'), 'stroke-width': 1.5 * px }, svg);
+    if (view.scale > 5) { const t = el('text', { x: s.x + Math.max(1.2, 6 * px), y: s.z, 'font-size': Math.max(1.4, 10 * px), 'dominant-baseline': 'central', fill: token('--ink') }, svg); t.textContent = label; }
+  }
+  // Road end handles for the selected road.
+  if (selected?.type === 'road') {
+    const r = roadById(selected.id); if (r) {
+      const alongX = r.w >= r.d, ends = alongX ? [[r.x - r.w / 2, r.z, -1], [r.x + r.w / 2, r.z, 1]] : [[r.x, r.z - r.d / 2, -1], [r.x, r.z + r.d / 2, 1]];
+      for (const [x, z, side] of ends) el('circle', { cx: x, cy: z, r: Math.max(1, 8 * px), fill: token('--panel'), stroke: token('--select'), 'stroke-width': 2 * px, 'data-handle': side, class: 'unit' }, svg);
+    }
+  }
+}
+// ---------------------------------------------------------------- panel
+function gapTo(u) {
+  const self = town.units.find(x => x.id === u.id); let best = null;
+  for (const other of town.units) {
+    if (other === self || other.def.vehicle) continue;
+    for (const a of self.solids) for (const b of other.solids) {
+      const gx = Math.max(0, Math.abs(a[0] - b[0]) - (a[2] + b[2]) / 2), gz = Math.max(0, Math.abs(a[1] - b[1]) - (a[3] + b[3]) / 2), gap = Math.hypot(gx, gz);
+      if (!best || gap < best.gap) best = { gap, unit: other };
+    }
+  }
+  return best;
+}
+function renderPanel() {
+  const box = $('selection'); box.textContent = '';
+  const add = html => box.insertAdjacentHTML('beforeend', html);
+  if (!selected) {
+    add(`<p class="eyebrow">Move the town</p><h2>Tap a building, car or road</h2><p>Drag to move it. Turn buildings with ↺ ↻ or the R key. Arrow keys nudge by the snap step (Shift: 5 m). Add buildings from <b>+ Aset</b> and grow the town under <b>Saiz peta</b>. Mulakan dengan jalan bandar, tambah bangunan dan pokok, kemudian letak Titik mula FPS. Semua bangunan boleh digandakan atau dipadam.</p>`);
+  } else if (selected.type === 'unit') {
+    const u = unitById(selected.id), gap = gapTo(u), def = kindDef(u), numbered = placeIds(u).length > 0;
+    add(`<p class="eyebrow"></p><h2></h2>`); box.querySelector('.eyebrow').textContent = u.kind === 'custom' ? 'Bangunan sendiri · ' + CUSTOM_STYLES[customLook(u).style].label : def.label + (numbered ? '' : ' · extra');
+    box.querySelector('h2').textContent = nameOf(u);
+    if ((u.places || []).length > 1) { const p = document.createElement('p'); p.textContent = u.places.map(id => `${id} ${PLACES[id][0]}`).join(' · '); box.append(p); }
+    add(`<dl class="rows"><dt>Position</dt><dd>x ${u.x.toFixed(1)} m · z ${u.z.toFixed(1)} m</dd><dt>Front faces</dt><dd>${FACING[u.rot || 0]}</dd><dt>Nearest building</dt><dd id="gap"></dd></dl>`);
+    $('gap').textContent = gap ? `${gap.gap.toFixed(1)} m · ${nameOf(gap.unit)}` : '—';
+    add(`<div class="tools"><button data-act="left">↺ Turn left</button><button data-act="right">↻ Turn right</button><button data-act="centre">Centre on map</button></div>`);
+    if (!numbered && u.kind !== 'passerby') { add(`<label class="field">Nama pada papan tanda<input id="u-name" class="wide" maxlength="40"></label>`); $('u-name').value = u.name || ''; $('u-name').placeholder = u.kind === 'custom' ? 'Contoh: Kedai Kopi Ah Seng' : def.label; $('u-name').onchange = () => { const v = $('u-name').value.trim(); if (v) u.name = v; else delete u.name; commit(); }; }
+    if (u.kind === 'custom') customFields(u, add);
+    if (def.species) { add('<label class="field">Saiz pokok<input id="tree-size" type="number" min="0.4" max="2" step="0.1"></label>'); $('tree-size').value=u.size||1; $('tree-size').onchange=()=>{u.size=Math.max(.4,Math.min(2,+$('tree-size').value||1));commit();}; }
+
+    if (u.kind === 'sedan') { add(`<label class="field">Warna kereta<input id="u-color" type="color"></label>`); $('u-color').value = /^#[0-9a-f]{6}$/i.test(u.color || '') ? u.color : '#d4322c'; $('u-color').onchange = () => { u.color = $('u-color').value; commit(); }; }
+    add(`<div class="tools">${canCopy(u) ? '<button data-act="copy" title="Ctrl+D">⧉ Duplicate</button>' : ''}${u.kind === 'custom' ? '<button data-act="template">★ Save as template</button>' : ''}${canDelete(u) ? '<button data-act="delete-unit" title="Delete">Delete</button>' : ''}</div>`);
+
+  } else {
+    const r = roadById(selected.id);
+    add(`<p class="eyebrow">${r.kind === 'asphalt' ? 'Asphalt road' : 'Dirt path'}</p><h2></h2>`); box.querySelector('h2').textContent = roadName(r);
+    add(`<div class="tools"><label class="field">Length (m)<input id="road-length" type="number" min="2" max="160" step="0.5"></label><label class="field">Width (m)<input id="road-width" type="number" min="1" max="12" step="0.5"></label><label class="field">Surface<select id="road-kind"><option value="dirt">Dirt path</option><option value="asphalt">Asphalt</option></select></label></div>`);
+    const alongX = r.w >= r.d; $('road-length').value = alongX ? r.w : r.d; $('road-width').value = alongX ? r.d : r.w; $('road-kind').value = r.kind;
+    add(`<div class="tools" style="margin-top:8px"><button data-act="right">Turn 90°</button><button data-act="delete">Delete road</button></div>`);
+    const setSize = () => { const len = Math.max(2, snap(+$('road-length').value || 2)), wid = Math.max(1, snap(+$('road-width').value || 1)); if (r.w >= r.d) { r.w = len; r.d = wid; } else { r.d = len; r.w = wid; } commit(); };
+    $('road-length').onchange = setSize; $('road-width').onchange = setSize; $('road-kind').onchange = () => { r.kind = $('road-kind').value; commit(); };
+  }
+  add(`<div class="tools" style="margin-top:10px"><button data-act="add-road">+ Jalan asfalt</button></div>`);
+  box.querySelectorAll('[data-act]').forEach(b => b.onclick = () => {
+    const act = b.dataset.act;
+    if (act === 'left') turnSelected(-1); else if (act === 'right') turnSelected(1);
+    else if (act === 'centre') { const u = unitById(selected.id); view.cx = u.x; view.cz = u.z; applyView(); }
+    else if (act === 'delete') { plan.roads = plan.roads.filter(r => r.id !== selected.id); selected = null; commit(); }
+    else if (act === 'delete-unit') deleteSelected();
+    else if (act === 'copy') duplicateSelected();
+    else if (act === 'template') saveTemplate(unitById(selected.id));
+    else if (act === 'add-road') { let n = 1; while (roadById('new-path-' + n)) n++; plan.roads.push({ id: 'new-path-' + n, kind: 'asphalt', x: snap(view.cx), z: snap(view.cz), w: 30, d: 8 }); selected = { type: 'road', id: 'new-path-' + n }; commit(); }
+  });
+  // Checks and header status.
+  const list = $('checks'); list.textContent = '';
+  const errors = problems.filter(p => p.level === 'error').length, warnings = problems.length - errors;
+  if (!problems.length) { const li = document.createElement('li'); li.innerHTML = '<p>Map sah. Tiada objek bertindih. Tambah aset untuk bina bandar anda.</p>'; list.append(li); }
+  const extras = plan.units.filter(u => !placeIds(u).length && !KINDS[u.kind]?.vehicle).length;
+  if (extras) { const li = document.createElement('li'); li.innerHTML = `<p class="note">${extras} extra building${extras > 1 ? 's' : ''} added in the editor.</p>`; list.append(li); }
+  for (const p of problems) {
+    const li = document.createElement('li'); li.className = p.level; const b = document.createElement('button');
+    b.innerHTML = '<span class="dot" aria-hidden="true"></span><span></span>'; b.lastChild.textContent = p.text;
+    b.onclick = () => { if (p.units[0]) { selected = { type: 'unit', id: p.units[0] }; const u = unitById(p.units[0]); view.cx = u.x; view.cz = u.z; applyView(); refresh(); } };
+    li.append(b); list.append(li);
+  }
+  const status = $('status');
+  status.className = 'pill ' + (errors ? 'error' : storageError || warnings ? 'warn' : 'ok');
+  status.textContent = errors ? `${errors} problem${errors > 1 ? 's' : ''} to fix` : storageError ? 'Map belum disimpan' : warnings ? `${warnings} warning${warnings > 1 ? 's' : ''}` : 'Map sah';
+  status.title = storageError || '';
+  $('undo').disabled = step === 0; $('redo').disabled = step >= history.length - 1;
+  const floater = $('floater'); floater.hidden = !selected;
+  if (selected) { $('floater-name').textContent = selected.type === 'unit' ? nameOf(unitById(selected.id)) : roadName(roadById(selected.id)); }
+  const b64 = encodePlan(plan);
+  $('preview').href = GAME_URL + '#plan=' + b64;
+  const info = $('saveinfo');
+  info.textContent = storageError || (dirty ? 'Perubahan disimpan automatik pada peranti ini. Tekan Simpan atau Export JSON untuk salinan map.' : savedAt ? 'Disimpan pada peranti ini · '+new Date(savedAt).toLocaleTimeString() : 'Map kosong — bina bandar anda sendiri.');
+  info.style.color = storageError ? 'var(--error)' : '';
+  for (const id of ['save','save-2']) $(id).title = storageError || '';
+  for(const id of ['save','save-2'])$(id).textContent='Simpan map';
+  $('save-2').hidden=false;
+
+}
+function refresh() {
+  try { town = derive(plan); problems = planProblems(plan); } catch (error) { problems = [{ level: 'error', units: [], text: 'This layout could not be read: ' + error.message }]; }
+  draw(); renderPanel();
+  if (tab === 'library') renderLibrary(); else if (tab === 'town') renderTown();
+}
+
+// ---------------------------------------------------------------- custom buildings
+function customFields(u, add) {
+  const c = customLook(u), block = c.style === 'block';
+  add(`<div class="tools">
+    <label class="field">Bentuk<select id="c-style" style="width:auto">${Object.entries(CUSTOM_STYLES).map(([k, v]) => `<option value="${k}">${v.label}</option>`).join('')}</select></label>
+    <label class="field">Lebar (m)<input id="c-w" type="number" min="2" max="80" step="0.5"></label>
+    <label class="field">Dalam (m)<input id="c-d" type="number" min="2" max="80" step="0.5"></label>
+    ${block ? '<label class="field">Tingkat<input id="c-storeys" type="number" min="1" max="4" step="1"></label><label class="field">Bumbung<select id="c-roof"><option value="pitched">Condong</option><option value="flat">Rata</option></select></label>' : ''}
+    <label class="field">${c.style === 'plaza' ? 'Warna lantai' : 'Warna dinding'}<input id="c-wall" type="color"></label>
+    ${block ? '<label class="field">Warna bumbung<input id="c-roofColor" type="color"></label>' : ''}
+    <label class="field">Kategori<select id="c-cat" style="width:auto">${CATEGORIES.map(k => `<option value="${k.id}">${k.name}</option>`).join('')}</select></label>
+  </div>`);
+  for (const key of ['style', 'w', 'd', 'storeys', 'roof', 'wall', 'roofColor', 'cat']) {
+    const input = $('c-' + key); if (!input) continue;
+    input.value = c[key];
+    input.onchange = () => { u[key] = input.type === 'number' ? Math.round(+input.value * 2) / 2 : input.value; Object.assign(u, pickLook(customLook(u))); commit(); };
+  }
+}
+const pickLook = c => Object.fromEntries(LOOK.map(k => [k, c[k]]));
+function saveTemplate(u) {
+  const look = pickLook(customLook(u)), list = plan.templates || [];
+  let n = list.length + 1; while (list.some(t => t.id === 'template-' + n)) n++;
+  plan.templates = [...list, { id: 'template-' + n, ...look, name: look.name || `Bangunan ${n}` }];
+  commit(); showTab('library');
+}
+
+// ---------------------------------------------------------------- adding and removing
+// New buildings land on the nearest free ground to the middle of the view.
+function freeSpot(u) {
+  const B = townBounds(), others = town.units;
+  const fits = (x, z) => {
+    const t = derive({ units: [{ ...u, x, z }], roads: [] }).units[0];
+    return t.solids.every(([sx, sz, sw, sd]) => sx - sw / 2 >= B.minX && sx + sw / 2 <= B.maxX && sz - sd / 2 >= B.minZ && sz + sd / 2 <= B.maxZ && Math.abs(sx - RIVER.x) >= (sw + RIVER.w) / 2)
+      && !others.some(o => o.solids.some(p => t.solids.some(q => overlap(p, q, .5))))
+      && (t.def.open || t.def.vehicle || !plan.roads.some(r => t.solids.some(q => overlap(q, [r.x, r.z, r.w, r.d], .3))));
+  };
+  const cx = snap(view.cx), cz = snap(view.cz);
+  for (let r = 0; r <= 80; r += 2) { const n = Math.max(1, Math.round(r * 1.6)); for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, x = snap(cx + Math.cos(a) * r), z = snap(cz + Math.sin(a) * r); if (fits(x, z)) return [x, z]; } }
+  return [cx, cz];
+}
+function addUnit(u) {
+  [u.x, u.z] = freeSpot(u);
+  plan.units.push(u); selected = { type: 'unit', id: u.id };
+  showTab('edit'); commit();
+}
+const addKind = kind => addUnit({ id: nextId(kind), kind, x: 0, z: 0, rot: 0, ...(kind === 'sedan' ? { color: '#d4322c' } : {}) });
+const addCustom = look => addUnit({ id: nextId('custom'), kind: 'custom', x: 0, z: 0, rot: 0, ...pickLook(customLook(look)) });
+function duplicateSelected() {
+  const u = selected?.type === 'unit' && unitById(selected.id); if (!u || !canCopy(u)) return;
+  const copy = JSON.parse(JSON.stringify(u)); delete copy.places; copy.id = nextId(u.kind);
+  const back = [view.cx, view.cz]; view.cx = u.x; view.cz = u.z; addUnit(copy); [view.cx, view.cz] = back;
+}
+function deleteSelected() {
+  const u = selected?.type === 'unit' && unitById(selected.id); if (!u || !canDelete(u)) return;
+  plan.units = plan.units.filter(x => x !== u); selected = null; commit();
+}
+
+// ---------------------------------------------------------------- library
+function thumb(def, color) {
+  const rects = [...def.solids, ...(def.places || [])], [x, z, w, d] = bounds(rects), pad = Math.max(w, d) * .08 + .5;
+  const r = ([a, b, c, e], o) => `<rect x="${a - c / 2}" y="${b - e / 2}" width="${c}" height="${e}" fill="${color}" fill-opacity="${o}"/>`;
+  return `<svg viewBox="${x - w / 2 - pad} ${z - d / 2 - pad} ${w + pad * 2} ${d + pad * 2}" aria-hidden="true">${def.solids.map(q => r(q, .3)).join('')}${(def.places || []).map(q => r(q, .85)).join('')}</svg>`;
+}
+function renderLibrary() {
+  const box = $('library'), q = $('lib-search').value.trim().toLowerCase(); box.textContent = '';
+  const count = kind => plan.units.filter(u => u.kind === kind).length;
+  const size = def => { const [, , w, d] = bounds(def.places?.length ? def.places : def.solids); return `${+w.toFixed(1)} × ${+d.toFixed(1)} m`; };
+  const entries = [
+    { custom: true, cat: 'baru', name: 'Bangunan baru', def: kindDef({ kind: 'custom' }), note: 'Pilih bentuk, saiz, warna' },
+    ...Object.entries(KINDS).filter(([kind])=>kind!=='passerby').map(([kind, def]) => ({ kind, def, cat: def.cat, name: def.label, n: count(kind) })),
+    ...(plan.templates || []).map(t => ({ template: t, def: kindDef({ kind: 'custom', ...t }), cat: CATEGORIES.some(c => c.id === t.cat) ? t.cat : 'kedai', name: t.name }))
+  ];
+  const cats = [{ id: 'baru', name: 'Bina sendiri' }, ...CATEGORIES];
+  for (const cat of cats) {
+    const list = entries.filter(e => e.cat === cat.id && (!q || `${e.name} ${cat.name}`.toLowerCase().includes(q)));
+    if (!list.length) continue;
+    const section = document.createElement('section'); section.className = 'cat';
+    section.innerHTML = `<h3><i style="background:${catColor[cat.id] || 'var(--gold)'}"></i><span></span><small>${list.length}</small></h3><div class="cards"></div>`;
+    section.querySelector('h3 span').textContent = cat.name;
+    for (const e of list) {
+      const card = document.createElement('div'), taken = e.def.unique && e.n > 0, color = e.template ? customLook(e.template).wall : e.custom ? 'var(--gold)' : catColor[cat.id];
+      card.className = 'card';
+      const note = e.custom ? e.note : e.template ? `Template · ${size(e.def)}` : taken ? 'Sudah ada · tekan untuk cari' : `${size(e.def)} · ${e.n} di peta`;
+      card.innerHTML = `<button>${thumb(e.def, color)}<b></b><small></small></button>${e.template ? '<button class="x" aria-label="Delete template" title="Delete template">✕</button>' : ''}`;
+      card.querySelector('b').textContent = e.name; card.querySelector('small').textContent = note;
+      card.firstChild.onclick = () => {
+        if (e.custom) addCustom(CUSTOM_DEFAULTS);
+        else if (e.template) addCustom(e.template);
+        else if (taken) { const u = plan.units.find(x => x.kind === e.kind); selected = { type: 'unit', id: u.id }; view.cx = u.x; view.cz = u.z; showTab('edit'); applyView(); refresh(); }
+        else addKind(e.kind);
+      };
+      if (e.template) card.lastChild.onclick = () => { plan.templates = plan.templates.filter(t => t !== e.template); if (!plan.templates.length) delete plan.templates; commit(); };
+      section.querySelector('.cards').append(card);
+    }
+    box.append(section);
+  }
+  if (!box.children.length) box.innerHTML = '<p class="note">Tiada bangunan sepadan.</p>';
+  box.insertAdjacentHTML('beforeend', '<p class="note">Aset muncul di ruang kosong berhampiran tengah peta. Drag untuk pindah, R untuk putar, Duplicate untuk gandakan. Pokok menggunakan model asal RetroMalaysia.</p>');
+}
+
+// ---------------------------------------------------------------- town size
+const SIDES = [['minZ', 'Utara (atas)'], ['maxZ', 'Selatan (bawah)'], ['minX', 'Barat (kiri)'], ['maxX', 'Timur (kanan)']];
+function renderTown() {
+  const B = townBounds(), box = $('town-size'), w = B.maxX - B.minX, d = B.maxZ - B.minZ, D = DEFAULT_BOUNDS;
+  const big = w * d > 2 * (D.maxX - D.minX) * (D.maxZ - D.minZ);
+  box.innerHTML = `<section><p class="eyebrow">Saiz peta</p><h2>${w} × ${d} m</h2><p>Add or remove 10 m of grid on any side. Buildings stay where they are; new ground is empty land to build on.</p></section>
+    <section class="sides">${SIDES.map(([key, label]) => { const at = Math.abs(B[key]); return `<span>${label}</span><button data-side="${key}" data-dir="-1" ${at <= 20 ? 'disabled' : ''} aria-label="Shrink ${label} by 10 m">− 10 m</button><button data-side="${key}" data-dir="1" ${at >= BOUNDS_LIMIT ? 'disabled' : ''} aria-label="Grow ${label} by 10 m">+ 10 m</button>`; }).join('')}</section>
+    ${big ? '<p class="note">A big town plants more trees and lays longer routes, so it may run slower on older phones.</p>' : ''}
+    <section><p class="eyebrow">Grid & snap</p><div class="tools">
+      <label class="field">Grid lines<select id="grid-step"><option value="5">5 m</option><option value="10">10 m</option><option value="20">20 m</option></select></label>
+      <label class="field">Snap<select id="snap-step"><option value="0.5">0.5 m</option><option value="1">1 m</option><option value="2">2 m</option><option value="5">5 m</option></select></label>
+      <label class="field">Show grid<select id="grid-show"><option value="1">On</option><option value="0">Off</option></select></label>
+    </div></section>
+    <section><button id="bounds-reset" ${plan.bounds ? '' : 'disabled'}>Back to the original size</button></section>`;
+  box.querySelectorAll('[data-side]').forEach(b => b.onclick = () => {
+    const key = b.dataset.side, out = key.startsWith('min') ? -1 : 1, next = { ...B, [key]: B[key] + out * 10 * +b.dataset.dir };
+    plan.bounds = boundsOf({ bounds: next }); commit(); fitView();
+  });
+  $('grid-step').value = gridStep; $('snap-step').value = SNAP; $('grid-show').value = showGrid ? '1' : '0';
+  $('grid-step').onchange = () => { gridStep = +$('grid-step').value; saveView(); draw(); };
+  $('snap-step').onchange = () => { SNAP = +$('snap-step').value; saveView(); };
+  $('grid-show').onchange = () => { showGrid = $('grid-show').value === '1'; saveView(); draw(); };
+  $('bounds-reset').onclick = () => { delete plan.bounds; commit(); fitView(); };
+}
+function showTab(name) {
+  if(tab!==name)document.querySelector('.panel').scrollTop=0;
+  tab = name;
+  document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
+  document.querySelectorAll('[data-pane]').forEach(p => p.hidden = p.dataset.pane !== name);
+  if (name === 'library') renderLibrary(); else if (name === 'town') renderTown();
+}
+document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+$('lib-search').oninput = renderLibrary;
+
+// ---------------------------------------------------------------- input
+function toWorldPoint(event) {
+  const p = svg.createSVGPoint(); p.x = event.clientX; p.y = event.clientY;
+  const m = svg.getScreenCTM().inverse(), q = p.matrixTransform(m); return [q.x, q.y];
+}
+const pointers = new Map(); let drag = null, pinch = null;
+svg.addEventListener('pointerdown', event => {
+  svg.setPointerCapture(event.pointerId);
+  pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+  if (pointers.size === 2) { drag = null; const [a, b] = [...pointers.values()]; pinch = { dist: Math.hypot(a.x - b.x, a.y - b.y), scale: view.scale }; return; }
+  const [x, z] = toWorldPoint(event), target = event.target.closest('[data-unit],[data-road],[data-handle]');
+  if (target?.dataset.handle) { const r = roadById(selected.id); drag = { kind: 'handle', side: +target.dataset.handle, road: r, start: [x, z], orig: { ...r }, moved: false }; }
+  else if (target?.dataset.unit) { const u = unitById(target.dataset.unit); selected = { type: 'unit', id: u.id }; drag = { kind: 'item', item: u, start: [x, z], orig: [u.x, u.z], moved: false }; refresh(); }
+  else if (target?.dataset.road) { const r = roadById(target.dataset.road); selected = { type: 'road', id: r.id }; drag = { kind: 'item', item: r, start: [x, z], orig: [r.x, r.z], moved: false }; refresh(); }
+  else drag = { kind: 'pan', screen: [event.clientX, event.clientY], orig: [view.cx, view.cz], moved: false };
+});
+let frame = 0;
+svg.addEventListener('pointermove', event => {
+  if (!pointers.has(event.pointerId)) return;
+  pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+  if (pinch && pointers.size === 2) { const [a, b] = [...pointers.values()]; view.scale = Math.min(40, Math.max(1, pinch.scale * Math.hypot(a.x - b.x, a.y - b.y) / Math.max(1, pinch.dist))); cancelAnimationFrame(frame); frame = requestAnimationFrame(applyView); return; }
+  if (!drag) return;
+  if (drag.kind === 'pan') {
+    const dx = event.clientX - drag.screen[0], dy = event.clientY - drag.screen[1];
+    if (Math.hypot(dx, dy) > 4) drag.moved = true;
+    view.cx = drag.orig[0] - dx / view.scale; view.cz = drag.orig[1] - dy / view.scale;
+    cancelAnimationFrame(frame); frame = requestAnimationFrame(applyView); return;
+  }
+  const [x, z] = toWorldPoint(event), dx = x - drag.start[0], dz = z - drag.start[1];
+  if (Math.hypot(dx, dz) * view.scale > 4) drag.moved = true;
+  if (!drag.moved) return;
+  if (drag.kind === 'item') { drag.item.x = snap(drag.orig[0] + dx); drag.item.z = snap(drag.orig[1] + dz); }
+  else {
+    const r = drag.road, o = drag.orig, alongX = o.w >= o.d, delta = alongX ? dx : dz, len = alongX ? o.w : o.d;
+    const next = Math.max(2, snap(len + delta * drag.side)), shift = (next - len) / 2 * drag.side;
+    if (alongX) { r.w = next; r.x = o.x + shift; } else { r.d = next; r.z = o.z + shift; }
+  }
+  cancelAnimationFrame(frame); frame = requestAnimationFrame(refresh);
+});
+function release(event) {
+  pointers.delete(event.pointerId);
+  if (pointers.size < 2) pinch = null;
+  if (!drag) return;
+  if (drag.kind === 'pan' && !drag.moved && selected) { selected = null; refresh(); }
+  else if (drag.kind !== 'pan' && drag.moved) commit();
+  drag = null;
+}
+svg.addEventListener('pointerup', release); svg.addEventListener('pointercancel', release);
+svg.addEventListener('wheel', event => {
+  event.preventDefault();
+  const [x, z] = toWorldPoint(event), factor = Math.exp(-event.deltaY * .0015);
+  const next = Math.min(40, Math.max(1, view.scale * factor));
+  view.cx = x - (x - view.cx) * view.scale / next; view.cz = z - (z - view.cz) * view.scale / next; view.scale = next; applyView();
+}, { passive: false });
+window.addEventListener('keydown', event => {
+  if (event.target.closest('input,select,textarea')) return;
+  const mod = event.ctrlKey || event.metaKey, k = event.key;
+  if (mod && k.toLowerCase() === 'z') { event.preventDefault(); event.shiftKey ? redo() : undo(); return; }
+  if (mod && k.toLowerCase() === 'y') { event.preventDefault(); redo(); return; }
+  if (!selected) return;
+  if (mod && k.toLowerCase() === 'd') { event.preventDefault(); duplicateSelected(); return; }
+  const stepSize = event.shiftKey ? 5 : SNAP;
+  if (k === 'ArrowLeft') { event.preventDefault(); nudge(-stepSize, 0); } else if (k === 'ArrowRight') { event.preventDefault(); nudge(stepSize, 0); }
+  else if (k === 'ArrowUp') { event.preventDefault(); nudge(0, -stepSize); } else if (k === 'ArrowDown') { event.preventDefault(); nudge(0, stepSize); }
+  else if (k.toLowerCase() === 'r') turnSelected(event.shiftKey ? -1 : 1);
+  else if (k === 'Escape') { selected = null; refresh(); }
+  else if ((k === 'Delete' || k === 'Backspace') && selected.type === 'road') { plan.roads = plan.roads.filter(r => r.id !== selected.id); selected = null; commit(); }
+  else if (k === 'Delete' || k === 'Backspace') deleteSelected();
+});
+$('undo').onclick = undo; $('redo').onclick = redo;
+$('turn-left').onclick = () => turnSelected(-1); $('turn-right').onclick = () => turnSelected(1);
+$('deselect').onclick = () => { selected = null; refresh(); };
+$('zoom-in').onclick = () => { view.scale = Math.min(40, view.scale * 1.3); applyView(); };
+$('zoom-out').onclick = () => { view.scale = Math.max(1, view.scale / 1.3); applyView(); };
+$('zoom-fit').onclick = fitView;
+new ResizeObserver(() => applyView()).observe(svg);
+function showCopy() {
+  const text = JSON.stringify(plan, null, 2), box = $('copybox');
+  const done = () => { $('saveinfo').textContent = 'Layout copied. Simpan teks ini sebagai fail JSON.'; };
+  navigator.clipboard?.writeText(text).then(done, () => { box.hidden = false; box.value = text; box.select(); $('saveinfo').textContent = 'Pilih dan salin teks map ini.'; }) ?? (box.hidden = false, box.value = text, box.select());
+}
+$('copy').onclick = showCopy;
+async function save() {
+  try { const at=new Date().toISOString();localStorage.setItem('crow-zero-draft-v1',JSON.stringify({plan,editedAt:Date.now(),savedAt:at}));savedAt=at;dirty=false;storageError=null; }
+  catch { storageError='Map belum disimpan pada peranti. Storan penuh atau disekat. Gunakan Export JSON.'; }
+  renderPanel();
+}
+$('save').onclick=save; $('save-2').onclick=save;
+function resetPrompt(){
+  const zone=$('reset-zone');showTab('edit');
+  zone.innerHTML='<div class="confirm"><strong>Mulakan map kosong?</strong><p>Export JSON jika mahu salinan map semasa. Undo boleh pulihkan map selagi halaman ini terbuka.</p><div class="tools"><button id="reset-yes">Ya, map kosong</button><button id="reset-no">Batal</button></div></div>';
+  const back=()=>{zone.innerHTML='<button id="reset">Map kosong baru</button>';$('reset').onclick=resetPrompt;};
+  $('reset-no').onclick=back;
+  $('reset-yes').onclick=()=>{plan=JSON.parse(BASE);selected=null;commit();fitView();back();};
+  zone.scrollIntoView({block:'nearest'});
+}
+$('reset').onclick=resetPrompt;$('new-map').onclick=resetPrompt;
+$('export').onclick=()=>{const blob=new Blob([JSON.stringify(plan,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='crow-zero-map.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+$('import').onclick=()=>$('import-file').click();
+$('import-file').onchange=async event=>{
+  try {
+    const file=event.target.files[0];if(!file)return;if(file.size>2000000)throw Error('Fail terlalu besar (maksimum 2 MB).');
+    const next=JSON.parse(await file.text()),errors=validatePlan(next);if(errors.length)throw Error(errors[0]);
+    derive(next);plan=next;selected=null;commit();fitView();showTab('edit');
+  }catch(error){$('saveinfo').textContent='Import gagal: '+error.message;showTab('edit');}
+  event.target.value='';
+};
+$('legend').innerHTML = DISTRICT_INFO.map(d => `<span><i style="background:${d.color}"></i>${d.name}</span>`).join('') + `<span><i style="background:${kindColor.bus}"></i>Vehicles</span><span><i style="background:${kindColor.square}"></i>Town square</span><span><i style="background:#888;opacity:.6"></i>Extra buildings: their category colour</span>`;
+
+// ---------------------------------------------------------------- start
+const local=readLocal();
+if(local?.plan && !validatePlan(local.plan).length){try{load(local.plan);savedAt=local.savedAt||null;}catch{ /* ignore an invalid stored draft */ }}
+fitView();refresh();
+</script>
+
+</body></html>
