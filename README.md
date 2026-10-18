@@ -17,6 +17,8 @@ Open `tools/map-editor.html` (the home page opens it automatically).
 
 **Simpan map** saves on the current browser/device. Changes also autosave. **Export JSON** downloads a portable map, including custom templates and the FPS start; **Import JSON** restores it on another device. **Map kosong** asks before clearing and can be undone while the page is open. Undo/redo and JSON import do not require any external service.
 
+If browser storage is full or blocked, the editor shows **Map belum disimpan**. Use **Export JSON** to keep the current map; saving again clears the warning only after the browser accepts it. On small landscape phones the map and scrollable tools sit side by side; portrait phones show tools below the map.
+
 The 3D preview checks the map first: fix red layout errors before opening it. It includes collision with buildings, props and trees. This release is the map authoring foundation; crow AI, shooting, weapon HUD and missions are future gameplay work.
 
 ## Local commands
