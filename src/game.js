@@ -1,9 +1,9 @@
 import * as T from 'three';
 import { safeSpawn, movePlayer, canStand } from './walk.js?v=0.1.0';
-import { MAPS } from './maps.js?v=0.9.0';
-import { VERSION, missionScore, makesTopTen, DIFFICULTY, crowsWanted, MOVE, moveSpeed, SHOTGUN, SNIPER, bulletPath, bearing, crowCallout, MISSION, pelletOffsets, raySphere, pelletsKill, coverNear, stealthLabel, missionState, clock } from './hunt-rules.js?v=0.9.0';
-import { startAudio, setVolume, sfx } from './sfx.js?v=0.9.0';
-import { topTen, submitScore } from './leaderboard.js?v=0.9.0';
+import { MAPS } from './maps.js?v=0.9.1';
+import { VERSION, missionScore, makesTopTen, DIFFICULTY, crowsWanted, MOVE, moveSpeed, SHOTGUN, SNIPER, bulletPath, bearing, crowCallout, MISSION, pelletOffsets, raySphere, pelletsKill, coverNear, stealthLabel, missionState, clock } from './hunt-rules.js?v=0.9.1';
+import { startAudio, setVolume, sfx } from './sfx.js?v=0.9.1';
+import { topTen, submitScore } from './leaderboard.js?v=0.9.1';
 const $ = id => document.getElementById(id), canvas = $('world');
 
 // ------------------------------------------------------------ title & options
@@ -53,11 +53,25 @@ const esc = text => String(text).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};
 function showBoard(list, rows, mine = -1) {
   list.innerHTML = rows.map((row, i) => `<li class="${i === mine ? 'me' : ''}"><span>${esc(row.name)}</span><span class="lv">${esc(DIFFICULTY[row.difficulty]?.label || row.difficulty)}</span><b>${row.score}</b></li>`).join('');
 }
-$('scores-open').onclick = async () => {
-  $('scores').hidden = false; $('board').innerHTML = ''; $('board-msg').textContent = 'Memuatkan…';
-  try { const rows = await topTen(); showBoard($('board'), rows); $('board-msg').textContent = rows.length ? '' : 'Belum ada skor. Jadilah yang pertama!'; }
-  catch { $('board-msg').textContent = 'Papan skor perlukan sambungan internet.'; }
-};
+// Each built-in map has its own top 10; the player's own maps have none.
+const boardMap = MAPS[mapId] ? mapId : null;
+const boardTabs = $('board-maps');
+let shownBoard = boardMap || '01', boardLoad = 0;
+async function openBoard(map) {
+  shownBoard = map; const load = ++boardLoad;
+  for (const b of boardTabs.children) b.classList.toggle('on', b.dataset.map === map);
+  $('board').innerHTML = ''; $('board-msg').textContent = 'Memuatkan…';
+  try {
+    const rows = await topTen(map); if (load !== boardLoad) return;
+    showBoard($('board'), rows); $('board-msg').textContent = rows.length ? '' : 'Belum ada skor. Jadilah yang pertama!';
+  } catch { if (load === boardLoad) $('board-msg').textContent = 'Papan skor perlukan sambungan internet.'; }
+}
+for (const [id, map] of Object.entries(MAPS)) {
+  const b = document.createElement('button'); b.type = 'button'; b.dataset.map = id; b.innerHTML = `<b>PETA ${id}</b><small>${map.name}</small>`;
+  b.onclick = () => { if (id !== shownBoard) openBoard(id); };
+  boardTabs.append(b);
+}
+$('scores-open').onclick = () => { $('scores').hidden = false; openBoard(boardMap || shownBoard); };
 $('scores-close').onclick = () => { $('scores').hidden = true; };
 $('options-close').onclick = () => { $('options').hidden = true; };
 // Install: Chrome/Android offer a prompt (caught early in index.html); iOS
@@ -80,9 +94,9 @@ try {
   if (mapId !== 'editor') history.replaceState(null, '', '#plan=' + encode(mapId === 'saya' ? savedDraft : MAPS[mapId].plan));
   const { planFromHash, ROADS } = await import('./town-layout.js?v=0.1.0');
   if (!planFromHash(location.hash)) throw Error('Peta tidak sah. Betulkan masalah layout di editor.');
-  const { makeWorld } = await import('./world.js?v=0.9.0');
+  const { makeWorld } = await import('./world.js?v=0.9.1');
   const { toon } = await import('./illustration.js?v=0.1.0');
-  const { findPerches, createFlock } = await import('./crows.js?v=0.9.0');
+  const { findPerches, createFlock } = await import('./crows.js?v=0.9.1');
   const { createShotgun } = await import('./shotgun.js?v=0.4.0');
   const { createSniper } = await import('./sniper.js?v=0.4.0');
   const world = await makeWorld(canvas), { camera, renderer, scene, bounds, colliders } = world;
@@ -344,8 +358,10 @@ try {
     const { score, accuracy } = missionScore({ kills, shots, timeLeft, won: result === 'won', difficulty: settings.difficulty });
     $('s-score').textContent = score;
     const entry = { score, kills, accuracy, difficulty: settings.difficulty, seconds: level.seconds - timeLeft };
-    $('end-board').innerHTML = ''; $('end-board-msg').textContent = 'Menyemak papan skor…';
-    topTen().then(rows => {
+    $('end-board').innerHTML = '';
+    if (!boardMap) { $('end-board-msg').textContent = 'Peta sendiri tiada papan skor.'; return; }
+    $('end-board-msg').textContent = `Menyemak 10 teratas ${mapLabel}…`;
+    topTen(boardMap).then(rows => {
       if (makesTopTen(score, rows)) {
         // Only a top-10 score asks for a name.
         $('entry').hidden = false; $('end-board-msg').textContent = ''; showBoard($('end-board'), rows);
@@ -355,9 +371,9 @@ try {
           const name = $('player-name').value.trim(); if (!name) return;
           settings.name = name; saveSettings(); $('submit-score').disabled = true;
           try {
-            const rank = await submitScore({ ...entry, name });
-            $('entry').hidden = true; showBoard($('end-board'), await topTen(), rank - 1);
-            $('end-board-msg').textContent = `Anda nombor ${rank}!`;
+            const rank = await submitScore({ ...entry, map: boardMap, name });
+            $('entry').hidden = true; showBoard($('end-board'), await topTen(boardMap), rank - 1);
+            $('end-board-msg').textContent = `Anda nombor ${rank} di ${mapLabel}!`;
           } catch (error) { $('end-board-msg').textContent = error.message; $('submit-score').disabled = false; }
         };
       } else { showBoard($('end-board'), rows); $('end-board-msg').textContent = rows.length ? 'Belum masuk 10 teratas — cuba lagi!' : ''; }
