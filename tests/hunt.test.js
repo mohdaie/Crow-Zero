@@ -93,3 +93,10 @@ test('score: crows, time bonus when won, accuracy, times difficulty; top-10 chec
   const board=Array.from({length:10},(_,i)=>({score:1000-i*50}));
   assert.equal(makesTopTen(600,board),true);assert.equal(makesTopTen(550,board),false);assert.equal(makesTopTen(10,board.slice(0,4)),true);assert.equal(makesTopTen(0,[]),false);
 });
+test('map 02 (Taman Rimba) is valid, jungle-themed, with a big open padang and a thick jungle',async()=>{
+  const {PARK_PLAN}=await import('../src/park-plan.js');
+  assert.deepEqual(planProblems(PARK_PLAN),[]);
+  assert.equal(PARK_PLAN.theme,'jungle');assert.deepEqual(PARK_PLAN.bounds,CITY_PLAN.bounds);
+  assert.ok(PARK_PLAN.units.some(u=>u.kind==='padang'));
+  assert.ok(PARK_PLAN.units.filter(u=>u.kind.startsWith('tree-')).length>=100);
+});

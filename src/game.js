@@ -1,20 +1,37 @@
 import * as T from 'three';
 import { safeSpawn, movePlayer, canStand } from './walk.js?v=0.1.0';
-import { CITY_PLAN } from './city-plan.js?v=0.2.0';
-import { VERSION, missionScore, makesTopTen, DIFFICULTY, crowsWanted, MOVE, moveSpeed, SHOTGUN, SNIPER, bulletPath, bearing, crowCallout, MISSION, pelletOffsets, raySphere, pelletsKill, coverNear, stealthLabel, missionState, clock } from './hunt-rules.js?v=0.8.0';
-import { startAudio, setVolume, sfx } from './sfx.js?v=0.8.0';
-import { topTen, submitScore } from './leaderboard.js?v=0.8.0';
+import { MAPS } from './maps.js?v=0.9.0';
+import { VERSION, missionScore, makesTopTen, DIFFICULTY, crowsWanted, MOVE, moveSpeed, SHOTGUN, SNIPER, bulletPath, bearing, crowCallout, MISSION, pelletOffsets, raySphere, pelletsKill, coverNear, stealthLabel, missionState, clock } from './hunt-rules.js?v=0.9.0';
+import { startAudio, setVolume, sfx } from './sfx.js?v=0.9.0';
+import { topTen, submitScore } from './leaderboard.js?v=0.9.0';
 const $ = id => document.getElementById(id), canvas = $('world');
 
 // ------------------------------------------------------------ title & options
 // Settings live on this device: volume (0…1) and difficulty.
 const SETTINGS_KEY = 'crow-zero-settings-v1';
-const settings = { volume: .8, difficulty: 'biasa' };
+const settings = { volume: .8, difficulty: 'biasa', map: '01' };
 try { Object.assign(settings, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')); } catch { }
 if (!DIFFICULTY[settings.difficulty]) settings.difficulty = 'biasa';
 const saveSettings = () => { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch { } };
 setVolume(settings.volume);
 $('version').textContent = 'v' + VERSION;
+// Maps: the built-in ones, plus the player's own from the editor if saved.
+// The world is built once per page, so picking another map reloads.
+const decode = text => { try { return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(text.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0)))); } catch { return null; } };
+const built = plan => plan?.units?.some(u => u.kind !== 'spawn');
+let savedDraft; try { savedDraft = JSON.parse(localStorage.getItem('crow-zero-draft-v1') || 'null')?.plan; } catch { }
+const linked = location.hash.match(/[#&]plan=([A-Za-z0-9_-]+)/);
+const mapId = linked && built(decode(linked[1])) ? 'editor' : MAPS[settings.map] || (settings.map === 'saya' && built(savedDraft)) ? settings.map : '01';
+const mapTitle = MAPS[mapId]?.title || (mapId === 'saya' ? 'Peta saya' : 'Peta dari editor');
+const mapLabel = mapId === 'editor' || mapId === 'saya' ? 'PETA SAYA' : 'PETA ' + mapId;
+const mapButtons = $('maps');
+for (const [id, map] of [...Object.entries(MAPS), ...(built(savedDraft) ? [['saya', { name: 'PETA SAYA' }]] : [])]) {
+  const b = document.createElement('button'); b.type = 'button'; b.innerHTML = id === 'saya' ? '<b>PETA SAYA</b><small>dari editor</small>' : `<b>PETA ${id}</b><small>${map.name}</small>`;
+  b.classList.toggle('on', id === mapId || (id === 'saya' && mapId === 'editor'));
+  b.onclick = () => { if (b.classList.contains('on')) return; settings.map = id; saveSettings(); history.replaceState(null, '', location.pathname); location.reload(); };
+  mapButtons.append(b);
+}
+$('start-kicker').textContent = mapLabel; $('start-title').textContent = mapTitle; if (MAPS[mapId]) $('brief-where').textContent = MAPS[mapId].brief;
 const levelButtons = $('levels');
 for (const [id, level] of Object.entries(DIFFICULTY)) {
   const b = document.createElement('button'); b.dataset.level = id; b.innerHTML = `<b>${level.label}</b><small>${level.note}</small>`;
@@ -58,21 +75,14 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.ser
 const encode = plan => btoa(Array.from(new TextEncoder().encode(JSON.stringify(plan)), c => String.fromCharCode(c)).join('')).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
 try {
-  // Map: the editor's link, else the saved draft, else the built-in city.
-  // town-layout.js reads the hash when it loads, so it is imported after.
-  // A map with no buildings yet (a blank editor) plays in the built-in city.
-  const decode = text => { try { return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(text.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0)))); } catch { return null; } };
-  const built = plan => plan?.units?.some(u => u.kind !== 'spawn');
-  const linked = location.hash.match(/[#&]plan=([A-Za-z0-9_-]+)/);
-  if (!linked || !built(decode(linked[1]))) {
-    let saved; try { saved = JSON.parse(localStorage.getItem('crow-zero-draft-v1') || 'null')?.plan; } catch { }
-    history.replaceState(null, '', '#plan=' + encode(!linked && built(saved) ? saved : CITY_PLAN));
-  }
+  // The chosen map goes into the hash: town-layout.js reads it when it loads,
+  // so it is imported after. The editor's own link is played as it is.
+  if (mapId !== 'editor') history.replaceState(null, '', '#plan=' + encode(mapId === 'saya' ? savedDraft : MAPS[mapId].plan));
   const { planFromHash, ROADS } = await import('./town-layout.js?v=0.1.0');
   if (!planFromHash(location.hash)) throw Error('Peta tidak sah. Betulkan masalah layout di editor.');
-  const { makeWorld } = await import('./world.js?v=0.7.0');
+  const { makeWorld } = await import('./world.js?v=0.9.0');
   const { toon } = await import('./illustration.js?v=0.1.0');
-  const { findPerches, createFlock } = await import('./crows.js?v=0.8.0');
+  const { findPerches, createFlock } = await import('./crows.js?v=0.9.0');
   const { createShotgun } = await import('./shotgun.js?v=0.4.0');
   const { createSniper } = await import('./sniper.js?v=0.4.0');
   const world = await makeWorld(canvas), { camera, renderer, scene, bounds, colliders } = world;
@@ -114,7 +124,7 @@ try {
   const ray = new T.Raycaster();
 
   // ---------------------------------------------------------------- HUD
-  $('mission-id').textContent = MISSION.id; $('mission-title').textContent = MISSION.title; $('brief-target').textContent = MISSION.target; $('start-title').textContent = MISSION.title;
+  $('mission-id').textContent = MISSION.id; $('mission-title').textContent = mapTitle; $('brief-target').textContent = MISSION.target;
   function hudAmmo() {
     $('mag').textContent = String(w.mag).padStart(2, '0'); $('reserve').textContent = '/ ' + w.reserve; $('ammo').classList.toggle('empty', w.mag === 0);
     $('ammo').dataset.weapon = w.id; $('weapon-name').textContent = w.name;
@@ -328,7 +338,7 @@ try {
     state = 'over'; if (document.pointerLockElement) document.exitPointerLock();
     const titles = { won: 'MISI BERJAYA', time: 'MASA TAMAT', ammo: 'PELURU HABIS' };
     const texts = { won: 'Pusat bandar bersih daripada gagak. Syabas!', time: 'Gagak masih banyak. Cuba sorok lebih rapat dan bidik dahulu.', ammo: 'Semua peluru telah digunakan. Bidik sebelum menembak.' };
-    $('end-title').textContent = titles[result]; $('end-text').textContent = texts[result]; $('end-kicker').textContent = MISSION.id + ' · ' + MISSION.title;
+    $('end-title').textContent = titles[result]; $('end-text').textContent = texts[result]; $('end-kicker').textContent = mapLabel + ' · ' + mapTitle;
     $('s-kills').textContent = kills; $('s-acc').textContent = shots ? Math.round(kills / shots * 100) + '%' : '–'; $('s-fled').textContent = fled; $('s-time').textContent = clock(level.seconds - timeLeft);
     $('end').hidden = false; result === 'won' ? sfx.win() : sfx.lose();
     const { score, accuracy } = missionScore({ kills, shots, timeLeft, won: result === 'won', difficulty: settings.difficulty });

@@ -166,6 +166,12 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;bac
 #entry p{margin:10px 0 6px}.entry-row{display:flex;gap:8px}
 #player-name{flex:1;min-width:0;font:900 17px Nunito,system-ui;padding:9px 12px;border:3px solid var(--ink);border-radius:12px;box-shadow:3px 3px 0 var(--ink)}
 #end .dialog,#scores .dialog{max-width:500px}
+/* Map picker on the title */
+#maps{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 2px}
+#maps button{font:inherit;text-align:left;padding:5px 12px;border:3px solid var(--ink);border-radius:12px;background:#fff;box-shadow:3px 3px 0 var(--ink);cursor:pointer;color:var(--ink)}
+#maps button b{display:block;font-size:13px;font-weight:1000;letter-spacing:1px}#maps button small{display:block;font-size:11px;font-weight:800}
+#maps button.on{background:var(--yellow);transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+@media (max-height:520px){#maps button{padding:3px 9px}#maps button b{font-size:11px}#maps button small{font-size:10px}}
 #rotate{display:none}
 [hidden]{display:none!important}
 .touch-only{display:none}
@@ -210,7 +216,8 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;bac
     <div class="brief card">
       <div class="tags"><span class="tag" id="start-kicker">MISI 01</span><span class="tag level" id="title-level">BIASA</span></div>
       <h1 id="start-title">Kawal kawasan pasar</h1>
-      <p>Gagak rumah memenuhi bumbung dan wayar di bandar. Tembak <b id="brief-target">20</b> ekor dalam <b id="brief-time">2 minit</b> — gagak tak tunggu lama.</p>
+      <div id="maps"></div>
+      <p><span id="brief-where">Gagak rumah memenuhi bumbung dan wayar di bandar.</span> Tembak <b id="brief-target">20</b> ekor dalam <b id="brief-time">2 minit</b> — gagak tak tunggu lama.</p>
       <div class="weapons-mini"><div><b>Senapang patah</b>Senyap, sebaran luas, jarak dekat.</div><div><b>Barrett M82</b>Teropong, tembus 3 gagak. Kuat bunyinya.</div></div>
       <ul><li>Ikut <b>amaran</b> & anak panah: “3 GAGAK DI KIRI ANDA”.</li><li><b>SOROK</b> di tepi dinding, kereta atau pokok.</li><li>Tahan <b>TEMBAK</b> untuk terus menembak · <b>TUKAR</b> senjata.</li></ul>
     </div>
@@ -218,7 +225,7 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;bac
     <p id="loading">Memuatkan bandar…</p>
     <div id="install-hint" class="card" hidden>iPhone/iPad: buka di Safari, tekan <b>Kongsi</b> → <b>Tambah ke Skrin Utama</b>.</div>
   </div>
-  <span id="version">v0.8.0</span>
+  <span id="version">v0.9.0</span>
 </div>
 <div id="options" class="overlay" hidden><div class="dialog card">
   <h2>TETAPAN</h2><h1>Pilihan</h1>
@@ -235,5 +242,5 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;bac
   <div class="row"><button id="again">Main lagi</button></div></div></div>
 <div id="scores" class="overlay" hidden><div class="dialog card"><h2>10 TERATAS</h2><h1>Skor Tertinggi</h1><ol class="board" id="board"></ol><p class="board-status" id="board-msg"></p><div class="row"><button id="scores-close">TUTUP</button></div></div></div>
 <div id="rotate" class="overlay" style="z-index:9"><div class="dialog card"><h1>↻</h1><p>Pusingkan telefon ke mod melintang untuk bermain.</p></div></div>
-<script type="module" src="src/game.js?v=0.8.0"></script>
+<script type="module" src="src/game.js?v=0.9.0"></script>
 </body></html>

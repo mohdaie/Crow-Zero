@@ -20,7 +20,12 @@ export function findPerches({ colliders, solids, bounds, groundHeight, canStand,
     perches.push({ x, y: hit.point.y, z, kind, yaw, taken: false });
   };
   for (const c of colliders) {
-    if (c.r !== undefined) { if (['lamp', 'pole'].includes(c.kind)) probe(c.x + (rand() - .5) * .3, c.z + (rand() - .5) * .3, 'lamp'); continue; }
+    if (c.r !== undefined) {
+      if (['lamp', 'pole'].includes(c.kind)) probe(c.x + (rand() - .5) * .3, c.z + (rand() - .5) * .3, 'lamp');
+      // Treetops: the ray lands on the crown.
+      else if (c.kind === 'trunk') for (let i = 0; i < 2; i++) probe(c.x + (rand() - .5) * 2.4, c.z + (rand() - .5) * 2.4, 'tree');
+      continue;
+    }
     if (c.w * c.d < 12) continue;
     // Along the roof edge, where a crow can be seen (and shot) from the street.
     // Rows along each edge, facing out over the street.
@@ -94,10 +99,10 @@ export function createFlock({ scene, toon, perches, bounds, solids, groundHeight
   const freePerch = from => {
     const free = perches.filter(p => !p.taken && !p.cooldown);
     if (!free.length) return null;
-    // Rubbish areas draw crows most; then roofs, wires and lamps; open ground
+    // Hotspots (rubbish areas, open fields) draw crows most; then roofs, wires and lamps; open ground
     // only now and then.
     const dump = free.filter(p => p.kind === 'dump');
-    if (dump.length && Math.random() < .5) return dump[Math.floor(Math.random() * dump.length)];
+    if (dump.length && Math.random() < .6) return dump[Math.floor(Math.random() * dump.length)];
     const pool = free.filter(p => p.kind !== 'ground' || Math.random() < .3);
     const list = pool.length ? pool : free;
     return list[Math.floor(Math.random() * list.length)];
