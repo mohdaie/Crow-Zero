@@ -1,8 +1,9 @@
 import * as T from 'three';
 import { safeSpawn, movePlayer, canStand } from './walk.js?v=0.1.0';
 import { CITY_PLAN } from './city-plan.js?v=0.2.0';
-import { VERSION, DIFFICULTY, crowsWanted, MOVE, moveSpeed, SHOTGUN, SNIPER, bulletPath, bearing, crowCallout, MISSION, pelletOffsets, raySphere, pelletsKill, coverNear, stealthLabel, missionState, clock } from './hunt-rules.js?v=0.7.0';
-import { startAudio, setVolume, sfx } from './sfx.js?v=0.7.0';
+import { VERSION, missionScore, makesTopTen, DIFFICULTY, crowsWanted, MOVE, moveSpeed, SHOTGUN, SNIPER, bulletPath, bearing, crowCallout, MISSION, pelletOffsets, raySphere, pelletsKill, coverNear, stealthLabel, missionState, clock } from './hunt-rules.js?v=0.8.0';
+import { startAudio, setVolume, sfx } from './sfx.js?v=0.8.0';
+import { topTen, submitScore } from './leaderboard.js?v=0.8.0';
 const $ = id => document.getElementById(id), canvas = $('world');
 
 // ------------------------------------------------------------ title & options
@@ -30,6 +31,17 @@ showSettings();
 $('volume').oninput = () => { settings.volume = $('volume').value / 100; setVolume(settings.volume); saveSettings(); showSettings(); };
 $('volume-test').onclick = () => { startAudio(); setVolume(settings.volume); sfx.shot(); sfx.ping(); };
 $('options-open').onclick = () => { $('options').hidden = false; };
+// High scores: the shared top 10 (needs a connection).
+const esc = text => String(text).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
+function showBoard(list, rows, mine = -1) {
+  list.innerHTML = rows.map((row, i) => `<li class="${i === mine ? 'me' : ''}"><span>${esc(row.name)}</span><span class="lv">${esc(DIFFICULTY[row.difficulty]?.label || row.difficulty)}</span><b>${row.score}</b></li>`).join('');
+}
+$('scores-open').onclick = async () => {
+  $('scores').hidden = false; $('board').innerHTML = ''; $('board-msg').textContent = 'Memuatkan…';
+  try { const rows = await topTen(); showBoard($('board'), rows); $('board-msg').textContent = rows.length ? '' : 'Belum ada skor. Jadilah yang pertama!'; }
+  catch { $('board-msg').textContent = 'Papan skor perlukan sambungan internet.'; }
+};
+$('scores-close').onclick = () => { $('scores').hidden = true; };
 $('options-close').onclick = () => { $('options').hidden = true; };
 // Install: Chrome/Android offer a prompt (caught early in index.html); iOS
 // Safari installs from the Share menu, so it gets a hint instead.
@@ -60,7 +72,7 @@ try {
   if (!planFromHash(location.hash)) throw Error('Peta tidak sah. Betulkan masalah layout di editor.');
   const { makeWorld } = await import('./world.js?v=0.7.0');
   const { toon } = await import('./illustration.js?v=0.1.0');
-  const { findPerches, createFlock } = await import('./crows.js?v=0.7.0');
+  const { findPerches, createFlock } = await import('./crows.js?v=0.8.0');
   const { createShotgun } = await import('./shotgun.js?v=0.4.0');
   const { createSniper } = await import('./sniper.js?v=0.4.0');
   const world = await makeWorld(canvas), { camera, renderer, scene, bounds, colliders } = world;
@@ -83,6 +95,14 @@ try {
 
   // ------------------------------------------------------------ player state
   const position = safeSpawn(world.spawn, bounds, colliders);
+  // A random open spot, clear of walls by a couple of metres, away from the map edge.
+  function randomStart() {
+    for (let i = 0; i < 400; i++) {
+      const x = bounds.minX + 8 + Math.random() * (bounds.maxX - bounds.minX - 16), z = bounds.minZ + 8 + Math.random() * (bounds.maxZ - bounds.minZ - 16);
+      if (canStand(x, z, bounds, colliders) && !coverNear(x, z, colliders, 2)) return { x, z };
+    }
+    return safeSpawn(world.spawn, bounds, colliders);
+  }
   let yaw = world.spawn.heading + Math.PI, pitch = 0, eye = 1.65, crouched = false, aimHeld = false, aimToggle = false, aim = 0;
   let pump = -1, reloading = false, shellTimer = 0;
   let held = 0, runFov = 0; const heldDir = { x: 0, z: 0 };
@@ -226,6 +246,7 @@ try {
   window.addEventListener('resize', resize); resize();
   const MOVE_KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight'];
   window.addEventListener('keydown', e => {
+    if (e.target.closest?.('input')) return; // typing a name, not playing
     if (MOVE_KEYS.includes(e.code)) { e.preventDefault(); keys.add(e.code); }
     if (e.repeat) return;
     if (e.code === 'KeyR') startReload();
@@ -290,6 +311,8 @@ try {
     startAudio(); setVolume(settings.volume);
     // The difficulty sets the crows: how many sit in town at the start, and how long each stays.
     level = DIFFICULTY[settings.difficulty]; flock.settings.stay = level.stay; timeLeft = level.seconds;
+    // Every mission starts somewhere new on the map, facing a random way.
+    Object.assign(position, randomStart()); yaw = Math.random() * Math.PI * 2; pitch = 0;
     for (let i = 0; i < 60 && flock.crows.length < level.start; i++) flock.spawnGroup(Math.min(groupSize(), level.start - flock.crows.length), true);
     $('title').hidden = true; $('options').hidden = true; state = 'playing'; last = performance.now();
     // Phones: full screen, locked sideways, where the browser allows it.
@@ -308,11 +331,33 @@ try {
     $('end-title').textContent = titles[result]; $('end-text').textContent = texts[result]; $('end-kicker').textContent = MISSION.id + ' · ' + MISSION.title;
     $('s-kills').textContent = kills; $('s-acc').textContent = shots ? Math.round(kills / shots * 100) + '%' : '–'; $('s-fled').textContent = fled; $('s-time').textContent = clock(level.seconds - timeLeft);
     $('end').hidden = false; result === 'won' ? sfx.win() : sfx.lose();
+    const { score, accuracy } = missionScore({ kills, shots, timeLeft, won: result === 'won', difficulty: settings.difficulty });
+    $('s-score').textContent = score;
+    const entry = { score, kills, accuracy, difficulty: settings.difficulty, seconds: level.seconds - timeLeft };
+    $('end-board').innerHTML = ''; $('end-board-msg').textContent = 'Menyemak papan skor…';
+    topTen().then(rows => {
+      if (makesTopTen(score, rows)) {
+        // Only a top-10 score asks for a name.
+        $('entry').hidden = false; $('end-board-msg').textContent = ''; showBoard($('end-board'), rows);
+        $('player-name').value = settings.name || ''; $('player-name').focus();
+        $('entry').onsubmit = async event => {
+          event.preventDefault();
+          const name = $('player-name').value.trim(); if (!name) return;
+          settings.name = name; saveSettings(); $('submit-score').disabled = true;
+          try {
+            const rank = await submitScore({ ...entry, name });
+            $('entry').hidden = true; showBoard($('end-board'), await topTen(), rank - 1);
+            $('end-board-msg').textContent = `Anda nombor ${rank}!`;
+          } catch (error) { $('end-board-msg').textContent = error.message; $('submit-score').disabled = false; }
+        };
+      } else { showBoard($('end-board'), rows); $('end-board-msg').textContent = rows.length ? 'Belum masuk 10 teratas — cuba lagi!' : ''; }
+    }).catch(() => { $('end-board-msg').textContent = 'Tiada internet: skor tidak dapat disemak.'; });
   }
 
   // Test hooks for automated browser checks: read state and aim at a crow.
   globalThis.crowGame = {
     ready: true, get state() { return state; }, get kills() { return kills; }, get ammo() { return [w.mag, w.reserve]; }, get weapon() { return w.id; }, swap: () => switchWeapon(), get perches() { return perches.length; },
+    finish: result => finish(result), setKills(n) { kills = n; shots = n; }, get position() { return { ...position, yaw }; },
     get crows() { return flock.crows.map(c => ({ state: c.state, aware: c.aware, x: c.pos.x, y: c.pos.y, z: c.pos.z })); },
     aimAt(i) { const c = flock.crows[i]; const d = c.pos.clone().sub(camera.position); yaw = Math.atan2(-d.x, -d.z); pitch = Math.atan2(d.y, Math.hypot(d.x, d.z)); },
     moveTo(x, z) { position.x = x; position.z = z; },

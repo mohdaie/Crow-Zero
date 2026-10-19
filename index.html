@@ -140,7 +140,7 @@
   .overlay{padding:8px}.dialog{padding:10px 16px 12px;box-shadow:5px 5px 0 var(--ink)}#options .dialog{max-width:640px}#options h2{display:none}.dialog h1{font-size:20px;margin:0}
   .field{margin-top:6px}.field>b{font-size:11px;margin-bottom:4px}#levels button{padding:6px 8px}#levels button small{font-size:10.5px}.dialog .row{margin-top:10px}.dialog button{padding:8px 22px;font-size:15px}}
 /* Options: volume and difficulty. */
-#options{z-index:7}
+#options,#scores{z-index:7}
 .field{text-align:left;margin:14px 0 0}.field>b{display:block;font-size:13px;letter-spacing:2px;margin-bottom:6px}
 .volume-row{display:flex;align-items:center;gap:12px}.volume-row output{min-width:48px;font-weight:1000}
 input[type=range]{-webkit-appearance:none;appearance:none;flex:1;height:18px;border:3px solid var(--ink);border-radius:12px;background:#fff;box-shadow:3px 3px 0 var(--ink)}
@@ -153,6 +153,19 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;bac
 #levels button:disabled{opacity:.55;cursor:not-allowed}
 #level-note{font-size:12px;font-weight:800;margin:8px 0 0;color:#8a4b00}
 #volume-test{font:900 13px Nunito,system-ui;padding:7px 12px;border:3px solid var(--ink);border-radius:12px;background:var(--blue);box-shadow:3px 3px 0 var(--ink);cursor:pointer}
+/* Leaderboard */
+.board{list-style:none;margin:10px 0 0;padding:0;text-align:left;display:grid;gap:5px;counter-reset:rank}
+.board li{counter-increment:rank;display:grid;grid-template-columns:30px 1fr auto auto;gap:8px;align-items:center;border:3px solid var(--ink);border-radius:12px;padding:4px 10px;background:#fff;font-size:14px;font-weight:800}
+.board li::before{content:counter(rank);font-weight:1000}
+.board li:nth-child(1){background:var(--yellow)}.board li:nth-child(2){background:#e9eef2}.board li:nth-child(3){background:#f3d2b5}
+.board li.me{outline:3px solid var(--red);outline-offset:2px}
+.board .lv{font-size:10px;font-weight:1000;letter-spacing:1px;border:2px solid var(--ink);border-radius:8px;padding:0 6px;background:var(--mint)}
+.board b{font-size:16px;font-weight:1000;font-variant-numeric:tabular-nums}
+.board-status{font-size:13px;font-weight:800;margin:8px 0 0}.board-status:empty{display:none}
+.score-line{margin:6px 0 0;font-size:15px;font-weight:1000;letter-spacing:2px}.score-line b{font-size:34px;letter-spacing:0;margin-left:6px}
+#entry p{margin:10px 0 6px}.entry-row{display:flex;gap:8px}
+#player-name{flex:1;min-width:0;font:900 17px Nunito,system-ui;padding:9px 12px;border:3px solid var(--ink);border-radius:12px;box-shadow:3px 3px 0 var(--ink)}
+#end .dialog,#scores .dialog{max-width:500px}
 #rotate{display:none}
 [hidden]{display:none!important}
 .touch-only{display:none}
@@ -201,11 +214,11 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;bac
       <div class="weapons-mini"><div><b>Senapang patah</b>Senyap, sebaran luas, jarak dekat.</div><div><b>Barrett M82</b>Teropong, tembus 3 gagak. Kuat bunyinya.</div></div>
       <ul><li>Ikut <b>amaran</b> & anak panah: “3 GAGAK DI KIRI ANDA”.</li><li><b>SOROK</b> di tepi dinding, kereta atau pokok.</li><li>Tahan <b>TEMBAK</b> untuk terus menembak · <b>TUKAR</b> senjata.</li></ul>
     </div>
-    <div class="menu"><button id="go" disabled>MULA ▶</button><button id="options-open">PILIHAN</button><button id="install" hidden>PASANG APP</button></div>
+    <div class="menu"><button id="go" disabled>MULA ▶</button><button id="scores-open">SKOR TERTINGGI</button><button id="options-open">PILIHAN</button><button id="install" hidden>PASANG APP</button></div>
     <p id="loading">Memuatkan bandar…</p>
     <div id="install-hint" class="card" hidden>iPhone/iPad: buka di Safari, tekan <b>Kongsi</b> → <b>Tambah ke Skrin Utama</b>.</div>
   </div>
-  <span id="version">v0.7.0</span>
+  <span id="version">v0.8.0</span>
 </div>
 <div id="options" class="overlay" hidden><div class="dialog card">
   <h2>TETAPAN</h2><h1>Pilihan</h1>
@@ -216,7 +229,11 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;bac
 <div id="paused" class="overlay" hidden><div class="dialog card"><h1>Jeda</h1><div class="row"><button id="resume">Sambung</button><button id="pause-options" class="ghost">Pilihan</button><button id="restart" class="ghost">Mula semula</button></div></div></div>
 <div id="end" class="overlay" hidden><div class="dialog card"><h2 id="end-kicker">MISI 01</h2><h1 id="end-title">MISI BERJAYA</h1><p id="end-text"></p>
   <div class="stats"><div>Gagak ditembak<b id="s-kills">0</b></div><div>Ketepatan<b id="s-acc">0%</b></div><div>Gagak terlepas<b id="s-fled">0</b></div><div>Masa<b id="s-time">0:00</b></div></div>
+  <div class="score-line">SKOR <b id="s-score">0</b></div>
+  <form id="entry" hidden><p><b>Tahniah! Anda masuk 10 teratas.</b> Masukkan nama:</p><div class="entry-row"><input id="player-name" maxlength="16" autocomplete="nickname" placeholder="Nama anda" required><button id="submit-score">SIMPAN</button></div></form>
+  <ol class="board" id="end-board"></ol><p class="board-status" id="end-board-msg"></p>
   <div class="row"><button id="again">Main lagi</button></div></div></div>
+<div id="scores" class="overlay" hidden><div class="dialog card"><h2>10 TERATAS</h2><h1>Skor Tertinggi</h1><ol class="board" id="board"></ol><p class="board-status" id="board-msg"></p><div class="row"><button id="scores-close">TUTUP</button></div></div></div>
 <div id="rotate" class="overlay" style="z-index:9"><div class="dialog card"><h1>↻</h1><p>Pusingkan telefon ke mod melintang untuk bermain.</p></div></div>
-<script type="module" src="src/game.js?v=0.7.0"></script>
+<script type="module" src="src/game.js?v=0.8.0"></script>
 </body></html>
