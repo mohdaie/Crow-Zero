@@ -1,6 +1,6 @@
 import * as T from 'three';
 import { toon, comicEdges, inkViewport } from './illustration.js?v=0.1.0';
-import { BUILDINGS, DISTRICTS, ROADS, BRIDGES, RIVER, TOWN_BOUNDS, GROUND, UNITS, customLook, FLOORS, SPOTS, PASSERSBY, STREET_PROPS, PROPS, PLACES, KINDS, toWorld } from './town-layout.js?v=0.1.0';
+import { PLAN, BUILDINGS, DISTRICTS, ROADS, BRIDGES, RIVER, TOWN_BOUNDS, GROUND, UNITS, customLook, FLOORS, SPOTS, PASSERSBY, STREET_PROPS, PROPS, PLACES, KINDS, toWorld } from './town-layout.js?v=0.1.0';
 import { createProps } from './props.js?v=0.1.0';
 import { createStorefronts } from './storefronts.js?v=0.1.0';
 import { createLandmarks } from './landmarks.js?v=0.1.0';
@@ -8,7 +8,7 @@ import { loadTownCars } from './town-cars.js?v=0.1.0';
 import { loadTownBus } from './town-bus.js?v=0.1.0';
 import { loadPetrolPump } from './petrol-pump.js?v=0.1.0';
 import { createTrees } from './trees.js?v=0.1.0';
-import { createGrass, grassMask, maskTexture, groundMaterial } from './grass.js?v=0.1.0';
+import { createGrass, grassMask, maskTexture, groundMaterial } from './grass.js?v=0.9.0';
 import { roadSurfaces } from './road-surfaces.js?v=0.1.0';
 import { paintSkyline, createCityRing } from './skyline.js?v=0.2.0';
 export const places = BUILDINGS;
@@ -73,16 +73,19 @@ export async function makeWorld(canvas) {
   wood.repeat.set(2,2);
   const textures = {grass:surface('grass'), dirt:surface('dirt'), wood, asphalt:surface('asphalt'), plaster:surface('plaster'), tile:surface('tile'), weathered:surface('weathered'), floor:surface('floor'), clay:surface('clay')};
   textures.dirt.repeat.set(1,1);textures.asphalt.repeat.set(1,1);textures.plaster.repeat.set(2,2);textures.tile.repeat.set(1,1);
-  // A painted city skyline wraps the playable streets; the 3D tower ring
-  // (skyline.js) fills the middle distance between them.
-  const panorama=new T.CanvasTexture(paintSkyline());
+  // City maps: a painted city skyline wraps the streets and a 3D tower ring
+  // (skyline.js) fills the middle distance. Jungle maps (plan.theme
+  // 'jungle'): the painted hills and palms, and a forest wall of trees.
+  const jungle=PLAN.theme==='jungle';
+  const panorama=jungle?await loader.loadAsync(new URL('../assets/textures/illustrated-horizon.webp',import.meta.url).href):new T.CanvasTexture(paintSkyline());
   panorama.colorSpace=T.SRGBColorSpace;panorama.wrapS=T.RepeatWrapping;panorama.repeat.x=3;
   scene.background=new T.Color(0x8ab8d1);
   const horizonRadius=Math.max(210,Math.hypot(Math.max(-GROUND.minX,GROUND.maxX),Math.max(-GROUND.minZ,GROUND.maxZ))+60);
   const horizon=new T.Mesh(new T.CylinderGeometry(horizonRadius,horizonRadius,160,64,1,true),new T.MeshBasicMaterial({map:panorama,side:T.BackSide,fog:false}));
   horizon.position.y=54;scene.add(horizon);
   const mats = new Map();
-  createCityRing({scene,toon,register:(key,material)=>{mats.set(key,material);return material;},ground:GROUND,roads:ROADS,bounds:TOWN_BOUNDS,outer:horizonRadius-8});
+  if(jungle){const floor=new T.Mesh(new T.PlaneGeometry(horizonRadius*2.2,horizonRadius*2.2),toon(0x5b8353));floor.rotation.x=-Math.PI/2;floor.position.y=-.09;floor.receiveShadow=true;floor.userData.landscape=true;mats.set('forest-floor',floor.material);scene.add(floor);}
+  else createCityRing({scene,toon,register:(key,material)=>{mats.set(key,material);return material;},ground:GROUND,roads:ROADS,bounds:TOWN_BOUNDS,outer:horizonRadius-8});
   function textured(color,kind) {
     const key=kind+color;
     if(!mats.has(key)){
@@ -484,6 +487,21 @@ export async function makeWorld(canvas) {
       }
       const label=sign('PASAR MALAM · SABTU',0,4.4,-10,12);label.rotation.y=Math.PI;
     },
+    // Padang: white lines, a goal at each end and benches along the sides.
+    // Crows land on the grass all over it, in plain view.
+    padang(u){
+      let seed=hashOf(u.id);const r=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);
+      for(const [w,d,x,z] of [[52,.18,0,-16],[52,.18,0,16],[.18,32,-26,0],[.18,32,26,0],[.18,32,0,0]])box(w,.02,d,0xf4e9d0,x,.03,z);
+      const ring=new T.Mesh(new T.RingGeometry(4.8,5.05,40),mat(0xf4e9d0));ring.rotation.x=-Math.PI/2;ring.position.set(0,.035,0);root.add(ring);
+      for(const side of [-1,1]){
+        const x=side*26;for(const z of [-3.6,3.6]){cylinder(.08,.08,2.4,0xf4e9d0,x,1.2,z);roundCollider(x,z,.1,'post');}
+        const bar=cylinder(.08,.08,7.2,0xf4e9d0,x,2.4,0);bar.rotation.x=Math.PI/2;
+        hotspot(x,2.5,-1.5);hotspot(x,2.5,1.5);
+      }
+      for(const z of [-19,19])for(const x of [-18,-6,6,18]){box(3,.12,.6,0xb5986a,x,.55,z);box(3,.5,.1,0x755d42,x,.85,z+(z<0?-.28:.28));for(const s of [-1.3,1.3])box(.1,.5,.5,0x414b3f,x+s,.27,z);collider(x,z,3,.7,'bench');hotspot(x+(r()-.5)*2,.62,z);}
+      // Crows all over the grass.
+      for(let x=-23;x<=23;x+=5.5)for(let z=-13;z<=13;z+=5.5)hotspot(x+(r()-.5)*3,.05,z+(r()-.5)*3);
+    },
     // Kawasan sampah: three skip bins against a low brick wall, piles of
     // rubbish bags and litter in front. Crows sit on the bin rims and bags.
     dump(u){
@@ -557,6 +575,18 @@ export async function makeWorld(canvas) {
     const species=KINDS[u.kind].species,size=Math.max(.4,Math.min(2,Number(u.size)||1));
     trees.plant({kind:species,x:u.x,z:u.z,size,seed:hashOf(u.id),ring:'in'});
     roundCollider(u.x,u.z,.35*size,'trunk');
+  }
+  // Jungle maps: a forest wall all round outside the playable ground, in the
+  // trees' cheaper far style, leaving the road out open.
+  if(jungle){
+    let s=77;const r=()=>((s=(s*1664525+1013904223)>>>0)/4294967296);
+    const out=(x,z)=>x<GROUND.minX-2||x>GROUND.maxX+2||z<GROUND.minZ-2||z>GROUND.maxZ+2,onRoad=(x,z)=>ROADS.some(rd=>rd.kind==='asphalt'&&(rd.w>=rd.d?Math.abs(z-rd.z)<rd.d/2+3:Math.abs(x-rd.x)<rd.w/2+3));
+    const kinds=['getah','durian','hujan','beringin','buluh','kelapa','nangka','pinang','hujan','getah'];
+    for(let i=0,made=0;i<2000&&made<190;i++){
+      const a=r()*Math.PI*2,d=Math.max(GROUND.maxX,GROUND.maxZ)+4+Math.pow(r(),.7)*70,x=Math.cos(a)*d*1.05,z=Math.sin(a)*d*1.05;
+      if(!out(x,z)||onRoad(x,z)||Math.hypot(x,z)>horizonRadius-12)continue;
+      trees.plant({kind:kinds[Math.floor(r()*kinds.length)],x,z,size:1+r()*.8,seed:i*7+3,ring:'far'});made++;
+    }
   }
   // Open ground: away from roads, the river, every unit and every obstacle.
   const solidNear=(x,z,pad)=>colliders.some(c=>c.r!==undefined?Math.hypot(x-c.x,z-c.z)<c.r+pad:Math.abs(x-c.x)<c.w/2+pad&&Math.abs(z-c.z)<c.d/2+pad);

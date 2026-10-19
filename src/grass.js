@@ -46,7 +46,8 @@ export function grassMask({ units, roads, bridges, props = [] }, bounds, ground,
   for (const u of units) {
     // Yards around a building are kept short.
     if (!u.def.vehicle) { const [ax, az, aw, ad] = u.area; clear(ax, az, aw, ad, 3, 255, 70); }
-    for (const [x, z, w, d] of u.solids) if (!u.def.vehicle) clear(x, z, w, d, .15);
+    // A lawn (the padang) stays green, just mown short; other footprints go bare.
+    for (const [x, z, w, d] of u.solids) if (u.def.lawn) clear(x, z, w, d, 0, 255, 35); else if (!u.def.vehicle) clear(x, z, w, d, .15);
     for (const [x, z, w, d] of u.floors) clear(x, z, w, d, .1);
   }
   // Grass creeps a little over the edges of dirt lanes, never onto asphalt
