@@ -167,11 +167,12 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;bac
 #player-name{flex:1;min-width:0;font:900 17px Nunito,system-ui;padding:9px 12px;border:3px solid var(--ink);border-radius:12px;box-shadow:3px 3px 0 var(--ink)}
 #end .dialog,#scores .dialog{max-width:500px}
 /* Map picker on the title */
-#maps{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 2px}
-#maps button{font:inherit;text-align:left;padding:5px 12px;border:3px solid var(--ink);border-radius:12px;background:#fff;box-shadow:3px 3px 0 var(--ink);cursor:pointer;color:var(--ink)}
-#maps button b{display:block;font-size:13px;font-weight:1000;letter-spacing:1px}#maps button small{display:block;font-size:11px;font-weight:800}
-#maps button.on{background:var(--yellow);transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
-@media (max-height:520px){#maps button{padding:3px 9px}#maps button b{font-size:11px}#maps button small{font-size:10px}}
+#maps,#board-maps{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 2px}
+#maps button,#board-maps button{font:inherit;text-align:left;padding:5px 12px;border:3px solid var(--ink);border-radius:12px;background:#fff;box-shadow:3px 3px 0 var(--ink);cursor:pointer;color:var(--ink)}
+#maps button b,#board-maps button b{display:block;font-size:13px;font-weight:1000;letter-spacing:1px}#maps button small,#board-maps button small{display:block;font-size:11px;font-weight:800}
+#maps button.on,#board-maps button.on{background:var(--yellow);transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+#board-maps{justify-content:center}
+@media (max-height:520px){#maps button,#board-maps button{padding:3px 9px}#maps button b,#board-maps button b{font-size:11px}#maps button small,#board-maps button small{font-size:10px}}
 #rotate{display:none}
 [hidden]{display:none!important}
 .touch-only{display:none}
@@ -225,7 +226,7 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;bac
     <p id="loading">Memuatkan bandar…</p>
     <div id="install-hint" class="card" hidden>iPhone/iPad: buka di Safari, tekan <b>Kongsi</b> → <b>Tambah ke Skrin Utama</b>.</div>
   </div>
-  <span id="version">v0.9.0</span>
+  <span id="version">v0.9.1</span>
 </div>
 <div id="options" class="overlay" hidden><div class="dialog card">
   <h2>TETAPAN</h2><h1>Pilihan</h1>
@@ -237,10 +238,10 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;bac
 <div id="end" class="overlay" hidden><div class="dialog card"><h2 id="end-kicker">MISI 01</h2><h1 id="end-title">MISI BERJAYA</h1><p id="end-text"></p>
   <div class="stats"><div>Gagak ditembak<b id="s-kills">0</b></div><div>Ketepatan<b id="s-acc">0%</b></div><div>Gagak terlepas<b id="s-fled">0</b></div><div>Masa<b id="s-time">0:00</b></div></div>
   <div class="score-line">SKOR <b id="s-score">0</b></div>
-  <form id="entry" hidden><p><b>Tahniah! Anda masuk 10 teratas.</b> Masukkan nama:</p><div class="entry-row"><input id="player-name" maxlength="16" autocomplete="nickname" placeholder="Nama anda" required><button id="submit-score">SIMPAN</button></div></form>
+  <form id="entry" hidden><p><b>Tahniah! Anda masuk 10 teratas peta ini.</b> Masukkan nama:</p><div class="entry-row"><input id="player-name" maxlength="16" autocomplete="nickname" placeholder="Nama anda" required><button id="submit-score">SIMPAN</button></div></form>
   <ol class="board" id="end-board"></ol><p class="board-status" id="end-board-msg"></p>
   <div class="row"><button id="again">Main lagi</button></div></div></div>
-<div id="scores" class="overlay" hidden><div class="dialog card"><h2>10 TERATAS</h2><h1>Skor Tertinggi</h1><ol class="board" id="board"></ol><p class="board-status" id="board-msg"></p><div class="row"><button id="scores-close">TUTUP</button></div></div></div>
+<div id="scores" class="overlay" hidden><div class="dialog card"><h2>10 TERATAS · SETIAP PETA</h2><h1>Skor Tertinggi</h1><div id="board-maps"></div><ol class="board" id="board"></ol><p class="board-status" id="board-msg"></p><div class="row"><button id="scores-close">TUTUP</button></div></div></div>
 <div id="rotate" class="overlay" style="z-index:9"><div class="dialog card"><h1>↻</h1><p>Pusingkan telefon ke mod melintang untuk bermain.</p></div></div>
-<script type="module" src="src/game.js?v=0.9.0"></script>
+<script type="module" src="src/game.js?v=0.9.1"></script>
 </body></html>

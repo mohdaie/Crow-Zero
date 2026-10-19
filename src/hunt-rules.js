@@ -72,7 +72,7 @@ export function stealthLabel(crouched, covered) {
 }
 
 // Game version, shown on the title screen (kept equal to package.json).
-export const VERSION = '0.9.0';
+export const VERSION = '0.9.1';
 
 // Difficulty: how many crows there are to find (more is easier) and how
 // long the mission lasts. `start` crows sit in town when it begins; then
