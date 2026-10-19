@@ -1,7 +1,7 @@
 import test from 'node:test';
 import {readFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
-import {VERSION,DIFFICULTY,crowsWanted,MOVE,moveSpeed,SHOTGUN,SNIPER,bulletPath,bearing,crowCallout,CROW_RADIUS,pelletOffsets,raySphere,pelletsKill,noticeRate,coverNear,stealthLabel,missionState,MISSION,clock} from '../src/hunt-rules.js';
+import {VERSION,missionScore,makesTopTen,SCORE_MULTIPLIER,DIFFICULTY,crowsWanted,MOVE,moveSpeed,SHOTGUN,SNIPER,bulletPath,bearing,crowCallout,CROW_RADIUS,pelletOffsets,raySphere,pelletsKill,noticeRate,coverNear,stealthLabel,missionState,MISSION,clock} from '../src/hunt-rules.js';
 import {planProblems} from '../src/town-layout.js';
 import {CITY_PLAN} from '../src/city-plan.js';
 import {derive} from '../src/town-layout.js';
@@ -83,4 +83,13 @@ test('holding a direction for 2 s breaks into a louder run',()=>{
   assert.equal(moveSpeed({held:1.9}),MOVE.walk);assert.equal(moveSpeed({held:2}),MOVE.run);
   assert.ok(moveSpeed({held:5,crouched:true})<MOVE.walk);assert.ok(moveSpeed({held:5,aim:1})<MOVE.walk);
   assert.ok(noticeRate({distance:30,running:true})>0&&noticeRate({distance:30,moving:true})<0,'running is heard further');
+});
+test('score: crows, time bonus when won, accuracy, times difficulty; top-10 check',()=>{
+  assert.deepEqual(missionScore({kills:20,shots:25,timeLeft:30,won:true,difficulty:'mudah'}),{score:2000+300+400,accuracy:80});
+  assert.equal(missionScore({kills:20,shots:25,timeLeft:30,won:true,difficulty:'sukar'}).score,5400);
+  assert.equal(missionScore({kills:5,shots:0,timeLeft:0,won:false,difficulty:'biasa'}).score,750);
+  // Never above the ceiling the server enforces.
+  for(const d of Object.keys(SCORE_MULTIPLIER))assert.ok(missionScore({kills:20,shots:20,timeLeft:300,won:true,difficulty:d}).score<=Math.ceil((20*100+3000+500)*SCORE_MULTIPLIER[d]));
+  const board=Array.from({length:10},(_,i)=>({score:1000-i*50}));
+  assert.equal(makesTopTen(600,board),true);assert.equal(makesTopTen(550,board),false);assert.equal(makesTopTen(10,board.slice(0,4)),true);assert.equal(makesTopTen(0,[]),false);
 });

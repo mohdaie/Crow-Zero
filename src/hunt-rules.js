@@ -72,7 +72,7 @@ export function stealthLabel(crouched, covered) {
 }
 
 // Game version, shown on the title screen (kept equal to package.json).
-export const VERSION = '0.7.0';
+export const VERSION = '0.8.0';
 
 // Difficulty: how many crows there are to find (more is easier) and how
 // long the mission lasts. `start` crows sit in town when it begins; then
@@ -129,6 +129,18 @@ export function crowCallout(player, crows, range = 70) {
 export function bulletPath(hits, wall = Infinity, pierce = SNIPER.pierce, range = SNIPER.range) {
   return hits.filter(([d]) => d < wall && d <= range).sort((a, b) => a[0] - b[0]).slice(0, pierce).map(([, crow]) => crow);
 }
+
+// Score: 100 a crow, plus (when the mission is won) 10 a second left on
+// the clock, plus up to 500 for accuracy; then times the difficulty. The
+// server (submit_crow_score) checks the same ceiling.
+export const SCORE_MULTIPLIER = { mudah: 1, biasa: 1.5, sukar: 2 };
+export function missionScore({ kills, shots, timeLeft, won, difficulty }) {
+  const accuracy = shots ? Math.min(1, kills / shots) : 0;
+  const base = kills * 100 + (won ? Math.round(Math.max(0, timeLeft)) * 10 : 0) + Math.round(accuracy * 500);
+  return { score: Math.round(base * (SCORE_MULTIPLIER[difficulty] ?? 1)), accuracy: Math.round(accuracy * 100) };
+}
+// Does `score` earn a place in a top-10 `board` (sorted, highest first)?
+export const makesTopTen = (score, board) => score > 0 && (board.length < 10 || score > board[9].score);
 
 export function missionState({ kills, timeLeft, shells }) {
   if (kills >= MISSION.target) return 'won';
